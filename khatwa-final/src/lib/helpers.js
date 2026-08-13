@@ -36,18 +36,44 @@ export const fmtDate = (s) => {
 
 export const pctClass = (p) => (p < 40 ? "low" : p < 75 ? "mid" : "high");
 
-/* الأيام المتتالية: تُحتسب على الأيام التي فيها مقررات فقط */
-export const calcStreak = (assignments, doneDates) => {
-  const dates = new Set(doneDates);
-  const due = new Set(assignments.map((a) => a.due_date));
+/* الأيام المتتالية: يوم يُحتسب إذا أنجز الطالب *كل* مقررات ذلك اليوم.
+   الأيام التي لا مقررات فيها تُتخطى (لا تكسر السلسلة).
+   يوم اليوم لا يكسرها إن لم يكتمل بعد — لأنه لم ينتهِ. */
+export const calcStreak = (assignments) => {
+  const byDay = new Map();
+  assignments.forEach((a) => {
+    if (!byDay.has(a.due_date)) byDay.set(a.due_date, []);
+    byDay.get(a.due_date).push(a);
+  });
+
+  const T = todayIso();
   let n = 0;
-  for (let i = 0; i < 90; i++) {
+  for (let i = 0; i < 120; i++) {
     const k = iso(addDays(today(), -i));
-    if (!due.has(k)) continue;
-    if (dates.has(k)) n++;
-    else if (i > 0) break;
+    const items = byDay.get(k);
+    if (!items || items.length === 0) continue;
+    const all = items.every((a) => a.done);
+    if (all) n++;
+    else if (k === T) continue;
+    else break;
   }
   return n;
+};
+
+/* أطول سلسلة تحققت في السجل كله */
+export const bestStreak = (assignments) => {
+  const byDay = new Map();
+  assignments.forEach((a) => {
+    if (!byDay.has(a.due_date)) byDay.set(a.due_date, []);
+    byDay.get(a.due_date).push(a);
+  });
+  const days = [...byDay.keys()].sort();
+  let best = 0, run = 0;
+  days.forEach((k) => {
+    if (byDay.get(k).every((a) => a.done)) { run++; best = Math.max(best, run); }
+    else run = 0;
+  });
+  return best;
 };
 
 /* آخر N يومًا مع عدد الإنجازات في كل يوم */

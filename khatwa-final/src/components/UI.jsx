@@ -1,6 +1,14 @@
+
+
+Ui · JSX
 import React, { useState, useEffect } from "react";
 import { DN, DL, iso, todayIso, weekDays, fmtDate, pctClass } from "../lib/helpers";
-
+ 
+/* اهتزاز خفيف على الجوال */
+export const buzz = (ms = 12) => {
+  try { navigator.vibrate?.(ms); } catch (e) { /* غير مدعوم */ }
+};
+ 
 /* عدّاد بكرات يلف */
 export function Odometer({ value, delay = 0 }) {
   const [v, setV] = useState(0);
@@ -8,10 +16,10 @@ export function Odometer({ value, delay = 0 }) {
     const t = setTimeout(() => setV(value), delay);
     return () => clearTimeout(t);
   }, [value, delay]);
-
+ 
   const width = String(Math.max(value, 1)).length;
   const s = String(v).padStart(width, "0");
-
+ 
   return (
     <span className="odo" role="img" aria-label={String(value)}>
       {s.split("").map((c, i) => {
@@ -35,9 +43,9 @@ export function Odometer({ value, delay = 0 }) {
     </span>
   );
 }
-
+ 
 /* الرقم البطل */
-export function Hero({ eyebrow, value, unit, pct, foot, pop }) {
+export function Hero({ eyebrow, value, unit, pct, foot, pop, ringKey, streak }) {
   return (
     <div className="hero">
       {pop && (
@@ -45,6 +53,8 @@ export function Hero({ eyebrow, value, unit, pct, foot, pop }) {
           +{pop.n}
         </div>
       )}
+      {ringKey && <div className="ring" key={"r" + ringKey} />}
+ 
       <p className="eyebrow en" style={{ animationDelay: "40ms" }}>
         {eyebrow}
       </p>
@@ -52,31 +62,37 @@ export function Hero({ eyebrow, value, unit, pct, foot, pop }) {
         <Odometer value={value} delay={430} />
         <span className="unit">{unit}</span>
       </div>
-      <div className="gauge en" style={{ animationDelay: "200ms" }}>
+      <div className={`gauge en ${pct >= 100 ? "full" : ""}`} style={{ animationDelay: "200ms" }}>
         <i style={{ width: `${pct}%` }} />
       </div>
       <div className="herofoot en" style={{ animationDelay: "260ms" }}>
         {foot}
       </div>
+      {streak > 1 && (
+        <div className="en" style={{ animationDelay: "320ms", marginTop: 10 }}>
+          <span className="streak">🔥 <b>{streak}</b> أيام متتالية</span>
+        </div>
+      )}
     </div>
   );
 }
-
+ 
 /* شريط أيام الأسبوع */
 export function Rail({ items, sel, onSel }) {
   const days = weekDays();
   const T = todayIso();
   return (
-    <div className="rail en" style={{ animationDelay: "330ms" }}>
+    <div className="rail en" style={{ animationDelay: "360ms" }}>
       {days.map((d) => {
         const k = iso(d);
         const dayItems = items.filter((a) => a.due_date === k);
         const off = d.getDay() === 5 || d.getDay() === 6;
+        const allOk = dayItems.length > 0 && dayItems.every((a) => a.done);
         return (
           <button
             key={k}
-            className={`rday ${sel === k ? "on" : ""} ${off ? "off" : ""} ${k === T ? "today" : ""}`}
-            onClick={() => onSel(k)}
+            className={`rday ${sel === k ? "on" : ""} ${off ? "off" : ""} ${k === T ? "today" : ""} ${allOk ? "allok" : ""}`}
+            onClick={() => { onSel(k); buzz(8); }}
             aria-label={`${DN[d.getDay()]} ${d.getDate()}`}
           >
             <span className="dn">{DL[d.getDay()]}</span>
@@ -92,13 +108,13 @@ export function Rail({ items, sel, onSel }) {
     </div>
   );
 }
-
+ 
 export const Bar = ({ pct }) => (
   <div className="bar">
     <i className={pctClass(pct)} style={{ width: `${pct}%` }} />
   </div>
 );
-
+ 
 export const Loading = ({ text = "لحظة..." }) => (
   <div className="center">
     <div>
@@ -107,7 +123,7 @@ export const Loading = ({ text = "لحظة..." }) => (
     </div>
   </div>
 );
-
+ 
 export const Failed = ({ text, onRetry }) => (
   <div className="center">
     <div className="fail">
@@ -121,5 +137,6 @@ export const Failed = ({ text, onRetry }) => (
     </div>
   </div>
 );
-
+ 
 export { fmtDate };
+ 

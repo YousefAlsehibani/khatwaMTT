@@ -9,6 +9,7 @@ export default function Exec({ token, toast }) {
   const [tab, setTab] = useState("grades");
   const [f, setF] = useState({ role: "student", name: "", grade: GRADES[0] });
   const [made, setMade] = useState(null);
+  const [q, setQ] = useState("");
   const [busy, setBusy] = useState(false);
 
   const load = useCallback(async () => {
@@ -126,20 +127,20 @@ export default function Exec({ token, toast }) {
                 return (
                   <tr key={g.grade}>
                     <td style={{ fontWeight: 600 }}>{g.grade}</td>
-                    <td style={{ color: "var(--muted)" }}>{g.supervisor || "بدون مشرف"}</td>
-                    <td>
+                    <td data-l="المشرف" style={{ color: "var(--muted)" }}>{g.supervisor || "بدون مشرف"}</td>
+                    <td data-l="طلاب">
                       <span className="pill">{g.students}</span>
                     </td>
-                    <td>
+                    <td data-l="مقررات">
                       <span className="pill">{g.assignments}</span>
                     </td>
-                    <td>
+                    <td data-l="الإنجاز">
                       <div className="cellbar">
                         <Bar pct={pct} />
                         <span className="pill">{pct}%</span>
                       </div>
                     </td>
-                    <td>
+                    <td data-l="دقائق">
                       <span className="pill">{g.minutes}</span>
                     </td>
                   </tr>
@@ -151,6 +152,14 @@ export default function Exec({ token, toast }) {
       )}
 
       {tab === "all" && (
+        <>
+        <input
+          className="srch en"
+          style={{ animationDelay: "360ms" }}
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          placeholder="ابحث بالاسم أو الرمز أو الصف..."
+        />
         <div className="tablewrap en" style={{ animationDelay: "380ms" }}>
           <table>
             <thead>
@@ -179,20 +188,27 @@ export default function Exec({ token, toast }) {
                     pct: s.total ? Math.round((s.done / s.total) * 100) : 0,
                   }))
                   .sort((a, b) => b.pct - a.pct)
+                  .filter(
+                    (r) =>
+                      !q.trim() ||
+                      r.name.includes(q.trim()) ||
+                      r.code.includes(q.trim()) ||
+                      r.grade.includes(q.trim())
+                  )
                   .map((r) => (
                     <tr key={r.id}>
                       <td>{r.name}</td>
-                      <td style={{ color: "var(--muted)" }}>{r.grade}</td>
-                      <td>
+                      <td data-l="الصف" style={{ color: "var(--muted)" }}>{r.grade}</td>
+                      <td data-l="الرمز">
                         <span className="pill">{r.code}</span>
                       </td>
-                      <td>
+                      <td data-l="الإنجاز">
                         <Bar pct={r.pct} />
                       </td>
-                      <td>
+                      <td data-l="دقائق">
                         <span className="pill">{r.minutes}</span>
                       </td>
-                      <td>
+                      <td data-l="صفحات">
                         <span className="pill">{r.pages}</span>
                       </td>
                       <td>
@@ -214,6 +230,7 @@ export default function Exec({ token, toast }) {
             </tbody>
           </table>
         </div>
+        </>
       )}
 
       {tab === "sups" && (
@@ -240,8 +257,8 @@ export default function Exec({ token, toast }) {
                 sups.map((p) => (
                   <tr key={p.id}>
                     <td>{p.name}</td>
-                    <td style={{ color: "var(--muted)" }}>{p.grade}</td>
-                    <td>
+                    <td data-l="الصف" style={{ color: "var(--muted)" }}>{p.grade}</td>
+                    <td data-l="الرمز">
                       <span className="pill">{p.code}</span>
                     </td>
                     <td>

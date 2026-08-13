@@ -1,15 +1,17 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { execBoard, createAccount, deactivateAccount, errorText } from "../lib/api";
+import { execBoard, createAccount, deactivateAccount, updateMyAccount, errorText } from "../lib/api";
 import { Hero, Bar, Odometer, Loading, Failed } from "../components/UI";
 import { GRADES } from "../lib/helpers";
 
-export default function Exec({ token, toast }) {
+export default function Exec({ me, token, toast, onMeChange }) {
   const [data, setData] = useState(null);
   const [err, setErr] = useState("");
   const [tab, setTab] = useState("grades");
   const [f, setF] = useState({ role: "student", name: "", grade: GRADES[0] });
   const [made, setMade] = useState(null);
   const [q, setQ] = useState("");
+  const [acc, setAcc] = useState({ name: me?.name || "", code: me?.code || "" });
+  const [accMsg, setAccMsg] = useState("");
   const [busy, setBusy] = useState(false);
 
   const load = useCallback(async () => {
@@ -104,6 +106,9 @@ export default function Exec({ token, toast }) {
         </button>
         <button className={`tab ${tab === "add" ? "on" : ""}`} onClick={() => setTab("add")}>
           إضافة حساب
+        </button>
+        <button className={`tab ${tab === "me" ? "on" : ""}`} onClick={() => setTab("me")}>
+          حسابي
         </button>
       </div>
 
@@ -277,6 +282,62 @@ export default function Exec({ token, toast }) {
               )}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {tab === "me" && (
+        <div className="form en" style={{ animationDelay: "380ms" }}>
+          <div className="fl">
+            <label>اسمك</label>
+            <input
+              value={acc.name}
+              onChange={(e) => { setAcc({ ...acc, name: e.target.value }); setAccMsg(""); }}
+              placeholder="اسمك الكامل"
+            />
+          </div>
+
+          <div className="fl">
+            <label>رمز دخولك (٤ أرقام)</label>
+            <input
+              value={acc.code}
+              inputMode="numeric"
+              dir="ltr"
+              style={{ fontFamily: "'IBM Plex Mono', monospace", letterSpacing: ".3em" }}
+              onChange={(e) =>
+                /^\d{0,4}$/.test(e.target.value) && (setAcc({ ...acc, code: e.target.value }), setAccMsg(""))
+              }
+              placeholder="0000"
+            />
+          </div>
+
+          <button
+            className="btn"
+            disabled={busy || acc.name.trim().length < 2 || !/^\d{4}$/.test(acc.code)}
+            onClick={async () => {
+              setBusy(true);
+              try {
+                const r = await updateMyAccount(token, acc.name.trim(), acc.code);
+                if (!r.ok) { setAccMsg(errorText(r.error)); return; }
+                setAccMsg("");
+                toast("حدّثنا حسابك");
+                onMeChange?.({ ...me, name: r.name, code: r.code });
+              } catch (e) {
+                setAccMsg(e.message);
+              } finally {
+                setBusy(false);
+              }
+            }}
+          >
+            احفظ التغييرات
+          </button>
+
+          {accMsg && <p style={{ color: "var(--alert)", fontSize: 13, marginTop: 12 }}>{accMsg}</p>}
+
+          <p style={{ fontSize: 12, color: "var(--muted)", marginTop: 18, lineHeight: 1.9 }}>
+            رمزك هو مفتاحك الوحيد للدخول، وهو يفتح بيانات المدرسة كاملة — فاختر رمزًا
+            لا يسهل تخمينه، وتجنّب الأرقام المتسلسلة أو المكرّرة. احفظه في مكان آمن،
+            فلا توجد طريقة لاستعادته إن نسيته.
+          </p>
         </div>
       )}
 

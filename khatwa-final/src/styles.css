@@ -204,7 +204,8 @@ tbody tr{transition:background .15s} tbody tr:hover{background:var(--card)}
 .r2{display:grid;grid-template-columns:1fr 1fr;gap:20px}
 .made{margin-top:26px;padding-top:20px;border-top:1px solid var(--line)}
 
-.login{min-height:100vh;display:grid;place-items:center;padding:36px 22px}
+.login{min-height:100vh;min-height:100svh;display:flex;flex-direction:column;justify-content:center;
+  align-items:center;padding:28px 20px calc(28px + env(safe-area-inset-bottom));overflow-y:auto}
 .lbox{width:100%;max-width:400px}
 .lmark{font-family:'Zain',sans-serif;font-weight:900;font-size:54px;letter-spacing:-.05em;line-height:1;color:var(--audio)}
 .ltag{color:var(--muted);font-size:13px;margin-top:6px}
@@ -262,9 +263,25 @@ tbody tr{transition:background .15s} tbody tr:hover{background:var(--card)}
   .cheer{padding:14px 15px;gap:12px}
   .cheer .big{font-size:30px}
 }
+/* ===== شاشة الدخول على الجوال ===== */
+@media (max-width:640px){
+  .lmark{font-size:44px}
+  .ltag{font-size:12.5px}
+  .digits{margin-top:24px;gap:8px}
+  .dg{height:66px;font-size:29px}
+}
 @media (max-width:380px){
-  .dg{height:64px;font-size:27px}
-  .digits{gap:6px}
+  .login{padding:20px 14px calc(20px + env(safe-area-inset-bottom))}
+  .lmark{font-size:38px}
+  .digits{gap:6px;margin-top:20px}
+  .dg{height:58px;font-size:25px}
+}
+/* الشاشات القصيرة جدًا (أو عند فتح لوحة المفاتيح) */
+@media (max-height:620px){
+  .login{justify-content:flex-start;padding-top:24px}
+  .lmark{font-size:36px}
+  .digits{margin-top:18px}
+  .dg{height:54px;font-size:24px}
 }
 @media (prefers-reduced-motion:reduce){
   *,*::before,*::after{animation:none!important;transition:none!important}

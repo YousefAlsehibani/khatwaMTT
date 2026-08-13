@@ -63,6 +63,16 @@ input,select{font-family:inherit}
 .hero{padding:20px 0 0;position:relative}
 .eyebrow{font-size:11.5px;color:var(--muted);letter-spacing:.16em}
 .bignum{font-family:'Zain',sans-serif;font-weight:900;font-size:clamp(84px,19vw,172px);line-height:.86;letter-spacing:-.045em;margin:8px 0 0;display:flex;align-items:baseline}
+
+/* رقمان متساويان في الأهمية */
+.duo{display:flex;align-items:baseline;gap:26px;margin:10px 0 0;flex-wrap:wrap}
+.duonum{font-family:'Zain',sans-serif;font-weight:900;font-size:clamp(58px,14vw,116px);
+  line-height:.88;letter-spacing:-.045em;display:flex;align-items:baseline}
+.duonum.audio{color:var(--audio)}
+.duonum.book{color:var(--book)}
+.duonum .unit{font-family:'Zain',sans-serif;font-weight:700;font-size:clamp(15px,3vw,23px);
+  color:var(--muted);margin-right:.22em;letter-spacing:-.02em}
+.duosep{width:1px;align-self:stretch;background:var(--line);margin:6px 0}
 .unit{font-family:'Zain',sans-serif;font-weight:700;font-size:clamp(19px,4vw,29px);color:var(--muted);margin-right:.2em;letter-spacing:-.02em}
 .gauge{height:3px;background:var(--hair);border-radius:2px;margin:22px 0 11px;overflow:hidden;position:relative}
 .gauge i{display:block;height:100%;background:var(--audio);border-radius:2px;transition:width 1.2s cubic-bezier(.22,.9,.24,1) .5s}
@@ -262,6 +272,14 @@ tbody tr{transition:background .15s} tbody tr:hover{background:var(--card)}
   .rtitle{min-width:100%;order:-1}
   .cheer{padding:14px 15px;gap:12px}
   .cheer .big{font-size:30px}
+  .duo{gap:16px}
+  .duonum{font-size:clamp(48px,17vw,84px)}
+  .duonum .unit{font-size:clamp(13px,3.6vw,18px)}
+}
+@media (max-width:360px){
+  .duo{gap:12px}
+  .duonum{font-size:44px}
+  .duosep{display:none}
 }
 /* ===== شاشة الدخول على الجوال ===== */
 @media (max-width:640px){

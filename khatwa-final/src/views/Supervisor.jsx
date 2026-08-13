@@ -10,6 +10,7 @@ export default function Supervisor({ me, token, toast }) {
   const [err, setErr] = useState("");
   const [tab, setTab] = useState("class");
   const [f, setF] = useState(EMPTY);
+  const [q, setQ] = useState("");
   const [busy, setBusy] = useState(false);
 
   const load = useCallback(async () => {
@@ -83,7 +84,8 @@ export default function Supervisor({ me, token, toast }) {
       ...s,
       pct: total ? Math.round((s.done / total) * 100) : 0,
     }))
-    .sort((a, b) => b.pct - a.pct);
+    .sort((a, b) => b.pct - a.pct)
+    .filter((r) => !q.trim() || r.name.includes(q.trim()) || r.code.includes(q.trim()));
 
   const behind = rows.filter((r) => r.late > 0);
   const avg = rows.length ? Math.round(rows.reduce((x, r) => x + r.pct, 0) / rows.length) : 0;
@@ -144,6 +146,13 @@ export default function Supervisor({ me, token, toast }) {
             </div>
           )}
 
+          <input
+            className="srch en"
+            style={{ animationDelay: "400ms" }}
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder="ابحث باسم الطالب أو رمزه..."
+          />
           <div className="tablewrap en" style={{ animationDelay: "420ms" }}>
             <table>
               <thead>
@@ -167,10 +176,10 @@ export default function Supervisor({ me, token, toast }) {
                   rows.map((r) => (
                     <tr key={r.id}>
                       <td>{r.name}</td>
-                      <td>
+                      <td data-l="الرمز">
                         <span className="pill">{r.code}</span>
                       </td>
-                      <td>
+                      <td data-l="الإنجاز">
                         <div className="cellbar">
                           <Bar pct={r.pct} />
                           <span className="pill">
@@ -178,13 +187,13 @@ export default function Supervisor({ me, token, toast }) {
                           </span>
                         </div>
                       </td>
-                      <td>
+                      <td data-l="دقائق">
                         <span className="pill">{r.minutes}</span>
                       </td>
-                      <td>
+                      <td data-l="صفحات">
                         <span className="pill">{r.pages}</span>
                       </td>
-                      <td>
+                      <td data-l="متأخر">
                         <span
                           className="pill"
                           style={{ color: r.late ? "var(--alert)" : "var(--muted)" }}
@@ -310,18 +319,18 @@ export default function Supervisor({ me, token, toast }) {
                 assignments.map((a) => (
                   <tr key={a.id}>
                     <td>{a.title}</td>
-                    <td>
+                    <td data-l="المقدار">
                       <span className={`tag ${a.kind}`}>
                         {a.kind === "audio" ? `${a.amount} د` : `${a.amount} ص`}
                       </span>
                     </td>
-                    <td>{fmtDate(a.due_date)}</td>
-                    <td>
+                    <td data-l="التاريخ">{fmtDate(a.due_date)}</td>
+                    <td data-l="أنجزه">
                       <span className="pill">
                         {a.done_count}/{data.total_students}
                       </span>
                     </td>
-                    <td style={{ whiteSpace: "nowrap" }}>
+                    <td data-l="" style={{ whiteSpace: "nowrap" }}>
                       <button className="btn sm" onClick={() => edit(a)} disabled={busy}>
                         عدّل
                       </button>{" "}

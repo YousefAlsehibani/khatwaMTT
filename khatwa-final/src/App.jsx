@@ -95,7 +95,9 @@ export default function App() {
 
       {me.role === "student" && <Student me={me} token={token} toast={setMsg} />}
       {me.role === "supervisor" && <Supervisor me={me} token={token} toast={setMsg} />}
-      {me.role === "exec" && <Exec token={token} toast={setMsg} />}
+      {me.role === "exec" && (
+        <Exec me={me} token={token} toast={setMsg} onMeChange={setMe} />
+      )}
 
       {msg && <div className="toast">{msg}</div>}
     </div>

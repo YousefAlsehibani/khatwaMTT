@@ -35,3 +35,28 @@ export const fmtDate = (s) => {
 };
 
 export const pctClass = (p) => (p < 40 ? "low" : p < 75 ? "mid" : "high");
+
+/* الأيام المتتالية: تُحتسب على الأيام التي فيها مقررات فقط */
+export const calcStreak = (assignments, doneDates) => {
+  const dates = new Set(doneDates);
+  const due = new Set(assignments.map((a) => a.due_date));
+  let n = 0;
+  for (let i = 0; i < 90; i++) {
+    const k = iso(addDays(today(), -i));
+    if (!due.has(k)) continue;
+    if (dates.has(k)) n++;
+    else if (i > 0) break;
+  }
+  return n;
+};
+
+/* آخر N يومًا مع عدد الإنجازات في كل يوم */
+export const heatDays = (records, span = 84) => {
+  const out = [];
+  for (let i = span - 1; i >= 0; i--) {
+    const k = iso(addDays(today(), -i));
+    const n = records.filter((r) => (r.completed_at || "").slice(0, 10) === k).length;
+    out.push({ k, n, lvl: n === 0 ? 0 : n === 1 ? 1 : n === 2 ? 2 : 3 });
+  }
+  return out;
+};

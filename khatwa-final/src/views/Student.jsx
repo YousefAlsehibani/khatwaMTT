@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { studentBoard, markDone, unmarkDone, errorText } from "../lib/api";
 import { Hero, Rail, Odometer, Loading, Failed, fmtDate, buzz } from "../components/UI";
-import { todayIso, iso, weekDays, calcStreak, heatDays } from "../lib/helpers";
+import { todayIso, iso, weekDays, calcStreak, bestStreak, heatDays } from "../lib/helpers";
 
 /* ---------- سطر مقرر ---------- */
 function Row({ a, i, onDone, onUndo, just, busy }) {
@@ -80,7 +80,7 @@ function Row({ a, i, onDone, onUndo, just, busy }) {
 }
 
 /* ---------- تبويب السجل ---------- */
-function Record({ assignments, minutes, pages, streak }) {
+function Record({ assignments, minutes, pages, streak, best }) {
   const [tip, setTip] = useState(null);
   const T = todayIso();
 
@@ -109,7 +109,7 @@ function Record({ assignments, minutes, pages, streak }) {
         <div className="stat">
           <span className="sv">{activeDays}</span>
           <span className="sl">يوم نشِط</span>
-          <span className="sx">أطول سلسلة {streak}</span>
+          <span className="sx">أطول سلسلة {best} يوم</span>
         </div>
         <div className="stat">
           <span className="sv">{pct}%</span>
@@ -246,10 +246,8 @@ export default function Student({ me, token, toast }) {
   const todayItems = all.filter((a) => a.due_date === T);
   const todayDone = todayItems.length > 0 && todayItems.every((a) => a.done);
 
-  const streak = calcStreak(
-    all,
-    all.filter((a) => a.done).map((a) => (a.completed_at || "").slice(0, 10))
-  );
+  const streak = calcStreak(all);
+  const best = bestStreak(all);
 
   return (
     <>
@@ -280,10 +278,15 @@ export default function Student({ me, token, toast }) {
 
       {todayDone && tab === "now" && (
         <div className="cheer">
-          <span className="big">✓</span>
+          <span className="big">{streak > 1 ? "🔥" : "✓"}</span>
           <div>
-            <h4>أنهيت مقررات اليوم</h4>
-            <p>خلّصت {todayItems.length} من {todayItems.length}. تقدر تبدأ بمقررات بكرة لو حاب.</p>
+            <h4>
+              {streak > 1 ? `${streak} أيام متتالية` : "أنهيت مقررات اليوم"}
+            </h4>
+            <p>
+              خلّصت {todayItems.length} من {todayItems.length}.
+              {streak > 1 ? " واصل بكرة عشان ما تنكسر السلسلة." : " تقدر تبدأ بمقررات بكرة لو حاب."}
+            </p>
           </div>
         </div>
       )}
@@ -299,6 +302,7 @@ export default function Student({ me, token, toast }) {
           minutes={Number(data.minutes) || 0}
           pages={Number(data.pages) || 0}
           streak={streak}
+          best={best}
         />
       )}
 
@@ -319,6 +323,11 @@ export default function Student({ me, token, toast }) {
                 <small className="pill">
                   {dayItems.length ? `${dayItems.filter((a) => a.done).length}/${dayItems.length}` : ""}
                 </small>
+                {sel === T && dayItems.length > 0 && !todayDone && streak > 0 && (
+                  <small style={{ fontSize: 12, color: "var(--book)" }}>
+                    أكمل اليوم وتصير سلسلتك {streak + 1} 🔥
+                  </small>
+                )}
               </div>
 
               <div className="ledger">

@@ -96,6 +96,10 @@ export const createAccount = (token, role, name, grade) =>
 export const deactivateAccount = (token, id) =>
   rpc("deactivate_account", { p_token: token, p_id: id });
 
+/* تعديل حساب المشرف التنفيذي نفسه */
+export const updateMyAccount = (token, name, code) =>
+  rpc("update_my_account", { p_token: token, p_name: name, p_code: code });
+
 /* ---------- رسائل الأخطاء ---------- */
 export const errorText = (code) =>
   ({
@@ -105,4 +109,6 @@ export const errorText = (code) =>
     forbidden: "ما عندك صلاحية لهذه العملية.",
     pages_required: "اكتب عدد الصفحات اللي قرأتها.",
     supervisor_exists: "فيه مشرف لهذا الصف أصلًا.",
+    bad_name: "الاسم قصير جدًا. اكتب حرفين على الأقل.",
+    code_taken: "هذا الرمز مستخدم لحساب آخر. جرّب رمزًا غيره.",
   }[code] || "صار خطأ غير متوقع. حاول مرة ثانية.");

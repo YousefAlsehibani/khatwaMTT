@@ -1,14 +1,11 @@
-
-
-Ui · JSX
 import React, { useState, useEffect } from "react";
 import { DN, DL, iso, todayIso, weekDays, fmtDate, pctClass } from "../lib/helpers";
- 
+
 /* اهتزاز خفيف على الجوال */
 export const buzz = (ms = 12) => {
   try { navigator.vibrate?.(ms); } catch (e) { /* غير مدعوم */ }
 };
- 
+
 /* عدّاد بكرات يلف */
 export function Odometer({ value, delay = 0 }) {
   const [v, setV] = useState(0);
@@ -16,10 +13,10 @@ export function Odometer({ value, delay = 0 }) {
     const t = setTimeout(() => setV(value), delay);
     return () => clearTimeout(t);
   }, [value, delay]);
- 
+
   const width = String(Math.max(value, 1)).length;
   const s = String(v).padStart(width, "0");
- 
+
   return (
     <span className="odo" role="img" aria-label={String(value)}>
       {s.split("").map((c, i) => {
@@ -43,9 +40,11 @@ export function Odometer({ value, delay = 0 }) {
     </span>
   );
 }
- 
-/* الرقم البطل */
-export function Hero({ eyebrow, value, unit, pct, foot, pop, ringKey, streak }) {
+
+/* الرقم البطل — يقبل رقمًا واحدًا أو رقمين متساويين في الأهمية */
+export function Hero({ eyebrow, value, unit, value2, unit2, pct, foot, pop, ringKey, streak }) {
+  const dual = value2 !== undefined && value2 !== null;
+
   return (
     <div className="hero">
       {pop && (
@@ -54,14 +53,30 @@ export function Hero({ eyebrow, value, unit, pct, foot, pop, ringKey, streak }) 
         </div>
       )}
       {ringKey && <div className="ring" key={"r" + ringKey} />}
- 
+
       <p className="eyebrow en" style={{ animationDelay: "40ms" }}>
         {eyebrow}
       </p>
-      <div className="bignum en" style={{ animationDelay: "90ms" }}>
-        <Odometer value={value} delay={430} />
-        <span className="unit">{unit}</span>
-      </div>
+
+      {dual ? (
+        <div className="duo en" style={{ animationDelay: "90ms" }}>
+          <div className="duonum audio">
+            <Odometer value={value} delay={430} />
+            <span className="unit">{unit}</span>
+          </div>
+          <span className="duosep" />
+          <div className="duonum book">
+            <Odometer value={value2} delay={560} />
+            <span className="unit">{unit2}</span>
+          </div>
+        </div>
+      ) : (
+        <div className="bignum en" style={{ animationDelay: "90ms" }}>
+          <Odometer value={value} delay={430} />
+          <span className="unit">{unit}</span>
+        </div>
+      )}
+
       <div className={`gauge en ${pct >= 100 ? "full" : ""}`} style={{ animationDelay: "200ms" }}>
         <i style={{ width: `${pct}%` }} />
       </div>
@@ -76,7 +91,7 @@ export function Hero({ eyebrow, value, unit, pct, foot, pop, ringKey, streak }) 
     </div>
   );
 }
- 
+
 /* شريط أيام الأسبوع */
 export function Rail({ items, sel, onSel }) {
   const days = weekDays();
@@ -108,13 +123,13 @@ export function Rail({ items, sel, onSel }) {
     </div>
   );
 }
- 
+
 export const Bar = ({ pct }) => (
   <div className="bar">
     <i className={pctClass(pct)} style={{ width: `${pct}%` }} />
   </div>
 );
- 
+
 export const Loading = ({ text = "لحظة..." }) => (
   <div className="center">
     <div>
@@ -123,7 +138,7 @@ export const Loading = ({ text = "لحظة..." }) => (
     </div>
   </div>
 );
- 
+
 export const Failed = ({ text, onRetry }) => (
   <div className="center">
     <div className="fail">
@@ -137,6 +152,5 @@ export const Failed = ({ text, onRetry }) => (
     </div>
   </div>
 );
- 
+
 export { fmtDate };
- 

@@ -254,23 +254,26 @@ export default function Student({ me, token, toast }) {
   return (
     <>
       <Hero
-        eyebrow="مجموع ما سمعته"
+        eyebrow="مجموع ما أنجزته"
         value={Number(data.minutes) || 0}
         unit="دقيقة"
+        value2={Number(data.pages) || 0}
+        unit2="صفحة"
         pct={pct}
         pop={pop}
         ringKey={ringKey}
         streak={streak}
         foot={
           <>
-            <b className="bk">
-              <Odometer value={Number(data.pages) || 0} delay={620} />
-            </b>{" "}
-            صفحة مقروءة
-            <span className="dot" />
             <b>{doneCount}</b> من {wkItems.length} مقرر هذا الأسبوع
             <span className="dot" />
             <b>{pct}%</b>
+            {late.length > 0 && (
+              <>
+                <span className="dot" />
+                <span className="late">{late.length} متأخر</span>
+              </>
+            )}
           </>
         }
       />

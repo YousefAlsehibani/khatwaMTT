@@ -1,373 +1,453 @@
-import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
-import { studentBoard, markDone, unmarkDone, errorText } from "../lib/api";
-import { Hero, Rail, Odometer, Loading, Failed, fmtDate, buzz } from "../components/UI";
-import { todayIso, iso, weekDays, calcStreak, bestStreak, heatDays } from "../lib/helpers";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
+import {
+  studentBoard, toggleClip, setPage, answerWeek, errorText,
+} from "../lib/api";
+import {
+  Odometer, Ring, BookGauge, CheckMark, Modal, Seal, Loading, Failed, buzz,
+} from "../components/UI";
+import {
+  thisWeekStart, weekLabel, relWeek, iso, addDays, parse, todayIso,
+  calcStreak, heatDays, fmtDate, DL, weekDaysOf,
+} from "../lib/helpers";
 
-/* ---------- سطر مقرر ---------- */
-function Row({ a, i, onDone, onUndo, just, busy }) {
-  const [p, setP] = useState("");
-  const T = todayIso();
-  const late = a.due_date < T && !a.done;
-  const partial = a.done && a.kind === "book" && a.pages_read < a.amount;
+/* ================= الكتاب ================= */
+function BookCard({ book, planId, token, onSaved, toast }) {
+  const [v, setV] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [confirm, setConfirm] = useState(null);
+
+  const submit = async (confirmBack = false) => {
+    const page = Number(v);
+    if (!page && page !== 0) return;
+    setBusy(true);
+    try {
+      const r = await setPage(token, planId, page, confirmBack);
+      if (!r.ok) {
+        if (r.error === "needs_confirm") { setConfirm({ page, current: r.current }); return; }
+        toast(errorText(r.error));
+        return;
+      }
+      setV(""); setConfirm(null);
+      buzz(14);
+      onSaved(r.added);
+    } catch (e) { toast(e.message); }
+    finally { setBusy(false); }
+  };
+
+  const left = book.pages_left;
 
   return (
-    <div
-      className={`row en ${a.done && !partial ? "done" : ""} ${partial ? "partial" : ""} ${just === a.id ? "just" : ""}`}
-      style={{ animationDelay: `${430 + i * 70}ms` }}
-    >
-      <span className="sweep" />
-      <span className={`tag ${a.kind}`}>
-        {a.kind === "audio" ? `${a.amount} د` : `${a.amount} ص`}
-      </span>
+    <div className="unit book en" style={{ animationDelay: "440ms" }}>
+      <div className="unithead">
+        <span className="utag book">كتاب</span>
+        <h3>{book.title}</h3>
+      </div>
 
-      <div className="rtitle">
-        <h3>{a.title}</h3>
-        <span className="strike" />
-        <small className={late ? "late" : ""}>
-          {fmtDate(a.due_date)}
-          {late ? " · فات موعده" : ""}
-        </small>
-        {partial && (
-          <div className="pagebar">
-            <i style={{ width: `${(a.pages_read / a.amount) * 100}%` }} />
-          </div>
+      <div className="bookbody">
+        <div className="bookpos">
+          <span className="bignumS book">
+            <Odometer value={book.current_page} delay={520} />
+          </span>
+          <span className="posl">موضعك · المدى {book.page_from}–{book.page_to}</span>
+        </div>
+
+        <BookGauge from={book.page_from} to={book.page_to} current={book.current_page} />
+
+        <div className="bookrow">
+          <label className="inl">وصلت إلى صفحة</label>
+          <input
+            className="pin"
+            value={v}
+            inputMode="numeric"
+            aria-label="رقم الصفحة"
+            placeholder={String(book.current_page || book.page_from)}
+            onChange={(e) => /^\d{0,4}$/.test(e.target.value) && setV(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && submit()}
+          />
+          <button className="btn book" disabled={!v || busy} onClick={() => submit()}>
+            سجّل
+          </button>
+        </div>
+
+        {left > 0 ? (
+          <p className="hintline">
+            باقي <b>{left}</b> صفحة
+          </p>
+        ) : (
+          <p className="hintline ok">✓ أنهيت صفحات الأسبوع</p>
         )}
       </div>
 
-      <div className="ract">
-        {a.url && !a.done && (
-          <a className="lk" href={a.url} target="_blank" rel="noreferrer">افتح ↗</a>
-        )}
-
-        {a.done ? (
-          <>
-            <span className="stamp">
-              {partial
-                ? `${a.pages_read} من ${a.amount} صفحة`
-                : `✓ ${a.kind === "audio" ? `${a.amount} دقيقة` : `${a.pages_read} صفحة`}`}
-            </span>
-            <button className="undo" onClick={() => { onUndo(a); buzz(8); }} disabled={busy}>
-              تراجع
-            </button>
-          </>
-        ) : a.kind === "audio" ? (
-          <button className="btn audio" onClick={() => { onDone(a, null); buzz(14); }} disabled={busy}>
-            سمعت
+      <Modal
+        open={!!confirm}
+        onClose={() => setConfirm(null)}
+        title="ترجع للخلف؟"
+      >
+        <p style={{ fontSize: 14, lineHeight: 1.9, marginBottom: 18 }}>
+          موضعك الحالي صفحة <b>{confirm?.current}</b>، وأنت تكتب <b>{confirm?.page}</b>.
+          لو أكّدت، ينقص رصيدك بمقدار الفرق. أكّد فقط إن كنت تصحّح خطأ.
+        </p>
+        <div className="modalrow">
+          <button className="btn ghostbtn" onClick={() => setConfirm(null)}>إلغاء</button>
+          <button className="btn" onClick={() => submit(true)} disabled={busy}>
+            نعم، صحّح موضعي
           </button>
-        ) : (
-          <>
-            <input
-              className="pin"
-              value={p}
-              placeholder="0"
-              inputMode="numeric"
-              aria-label="عدد الصفحات"
-              onChange={(e) => /^\d{0,3}$/.test(e.target.value) && setP(e.target.value)}
-            />
-            <span style={{ fontSize: 12, color: "var(--muted)" }}>من {a.amount}</span>
+        </div>
+      </Modal>
+    </div>
+  );
+}
+
+/* ================= المقاطع ================= */
+function ClipsCard({ clips, token, onSaved, toast, delay }) {
+  const [busy, setBusy] = useState(null);
+  const done = clips.filter((c) => c.done).length;
+
+  const flip = async (c) => {
+    setBusy(c.id);
+    try {
+      const r = await toggleClip(token, c.id, !c.done);
+      if (!r.ok) return toast(errorText(r.error));
+      buzz(c.done ? 8 : 16);
+      onSaved(c.done ? 0 : c.minutes);
+    } catch (e) { toast(e.message); }
+    finally { setBusy(null); }
+  };
+
+  return (
+    <div className="unit en" style={{ animationDelay: `${delay}ms` }}>
+      <div className="unithead">
+        <span className="utag audio">مقاطع</span>
+        <h3>{done} من {clips.length}</h3>
+      </div>
+
+      <div className="cliplist">
+        {clips.map((c, i) => (
+          <div key={c.id} className={`clip ${c.done ? "done" : ""}`}
+               style={{ animationDelay: `${520 + i * 60}ms` }}>
             <button
-              className="btn book"
-              disabled={!p || Number(p) < 1 || busy}
-              onClick={() => { onDone(a, Math.min(Number(p), a.amount)); setP(""); buzz(14); }}
+              className="cbtn"
+              onClick={() => flip(c)}
+              disabled={busy === c.id}
+              aria-label={c.done ? "إلغاء" : "سمعت"}
             >
-              سجّل
+              <CheckMark on={c.done} />
             </button>
-          </>
-        )}
+            <div className="clipmid">
+              <h4>{c.title}</h4>
+              <span className="pill">{c.minutes} دقيقة</span>
+            </div>
+            {!c.done && (
+              <a className="lk" href={c.url} target="_blank" rel="noreferrer">افتح ↗</a>
+            )}
+          </div>
+        ))}
       </div>
     </div>
   );
 }
 
-/* ---------- تبويب السجل ---------- */
-function Record({ assignments, minutes, pages, streak, best }) {
+/* ================= السجل ================= */
+function Record({ daily, minutes, pages, streak, weeks }) {
   const [tip, setTip] = useState(null);
   const T = todayIso();
-
-  const done = assignments.filter((a) => a.done);
-  const records = done.map((a) => ({ completed_at: a.completed_at }));
-  const days = useMemo(() => heatDays(records, 84), [assignments]);
-
-  const audioCount = done.filter((a) => a.kind === "audio").length;
-  const bookCount = done.filter((a) => a.kind === "book").length;
-  const activeDays = new Set(done.map((a) => (a.completed_at || "").slice(0, 10))).size;
-  const pct = assignments.length ? Math.round((done.length / assignments.length) * 100) : 0;
+  const days = useMemo(() => heatDays(daily, 84), [daily]);
+  const active = new Set((daily || []).filter((x) => Number(x.n) > 0).map((x) => x.d)).size;
+  const doneWeeks = (weeks || []).filter((w) => w.summary?.complete).length;
 
   return (
     <>
       <div className="statgrid en" style={{ animationDelay: "380ms" }}>
         <div className="stat">
-          <span className="sv" style={{ color: "var(--audio)" }}>{minutes}</span>
+          <span className="sv audio"><Odometer value={minutes} delay={420} /></span>
           <span className="sl">دقيقة مسموعة</span>
-          <span className="sx">{audioCount} مقطع</span>
         </div>
         <div className="stat">
-          <span className="sv" style={{ color: "var(--book)" }}>{pages}</span>
+          <span className="sv book"><Odometer value={pages} delay={500} /></span>
           <span className="sl">صفحة مقروءة</span>
-          <span className="sx">{bookCount} كتاب</span>
         </div>
         <div className="stat">
-          <span className="sv">{activeDays}</span>
+          <span className="sv"><Odometer value={active} delay={580} /></span>
           <span className="sl">يوم نشِط</span>
-          <span className="sx">أطول سلسلة {best} يوم</span>
         </div>
         <div className="stat">
-          <span className="sv">{pct}%</span>
-          <span className="sl">من كل المقررات</span>
-          <span className="sx">{done.length} من {assignments.length}</span>
+          <span className="sv"><Odometer value={doneWeeks} delay={660} /></span>
+          <span className="sl">أسبوع مكتمل</span>
         </div>
       </div>
 
-      <div className="blk en" style={{ animationDelay: "440ms", marginTop: 30 }}>
-        <div style={{ display: "flex", alignItems: "baseline", gap: 10, marginBottom: 12 }}>
-          <h4 style={{ margin: 0 }}>آخر ١٢ أسبوعًا</h4>
+      <div className="blk en" style={{ animationDelay: "460ms", marginTop: 30 }}>
+        <div className="blkhead">
+          <h4>آخر ١٢ أسبوعًا</h4>
           <small className="pill">
-            {tip ? `${fmtDate(tip.k)} — ${tip.n} مقرر` : "مرّر على أي مربع"}
+            {tip ? `${fmtDate(tip.k)} — ${tip.n}` : "مرّر على أي مربع"}
           </small>
         </div>
-
         <div className="heat big">
-          {days.map((d) => (
-            <div
-              key={d.k}
+          {days.map((d, i) => (
+            <div key={d.k}
               className={`hcell ${d.lvl ? "l" + d.lvl : ""} ${d.k === T ? "now" : ""}`}
-              onMouseEnter={() => setTip(d)}
-              onTouchStart={() => setTip(d)}
-              title={`${fmtDate(d.k)} — ${d.n} مقرر`}
-            />
+              style={{ animationDelay: `${480 + i * 5}ms` }}
+              onMouseEnter={() => setTip(d)} onTouchStart={() => setTip(d)}
+              title={`${fmtDate(d.k)} — ${d.n}`} />
           ))}
         </div>
-
         <div className="heatkey">
           <span>أقل</span>
           <i style={{ background: "var(--hair)" }} />
-          <i className="hcell l1" />
-          <i className="hcell l2" />
-          <i className="hcell l3" />
+          <i className="hcell l1" /><i className="hcell l2" /><i className="hcell l3" />
           <span>أكثر</span>
         </div>
+      </div>
 
-        <p style={{ fontSize: 12, color: "var(--muted)", marginTop: 14, lineHeight: 1.8 }}>
-          كل مربع يوم واحد، ولونه يغمق كل ما أنجزت فيه أكثر. الفراغات الطويلة تبيّن لك أيام الانقطاع.
-        </p>
+      <div className="blk en" style={{ animationDelay: "560ms" }}>
+        <h4>أسابيعك</h4>
+        {(weeks || []).length === 0 ? (
+          <p className="muted" style={{ fontSize: 13 }}>ما فيه أسابيع بعد.</p>
+        ) : (
+          weeks.map((w, i) => (
+            <div key={w.week_start} className="weekrow en"
+                 style={{ animationDelay: `${600 + i * 45}ms` }}>
+              <span className="wl">{weekLabel(w.week_start)}</span>
+              {w.is_makeup && <span className="utag makeup">تعويض</span>}
+              <div className="bar">
+                <i className={w.summary?.complete ? "high" : (w.summary?.pct || 0) < 40 ? "low" : "mid"}
+                   style={{ width: `${w.summary?.pct || 0}%` }} />
+              </div>
+              <span className="pill">{w.summary?.pct || 0}%</span>
+            </div>
+          ))
+        )}
       </div>
     </>
   );
 }
 
-/* ---------- الواجهة ---------- */
+/* ================= الواجهة ================= */
 export default function Student({ me, token, toast }) {
   const [data, setData] = useState(null);
   const [err, setErr] = useState("");
   const [tab, setTab] = useState("now");
-  const [sel, setSel] = useState(todayIso());
+  const [week, setWeek] = useState(null);
   const [pop, setPop] = useState(null);
-  const [just, setJust] = useState(null);
-  const [ringKey, setRingKey] = useState(null);
-  const [busy, setBusy] = useState(false);
-  const touch = useRef(null);
+  const [seal, setSeal] = useState(false);
+  const [askOpen, setAskOpen] = useState(false);
+  const [answer, setAnswer] = useState("");
+  const [saving, setSaving] = useState(false);
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (w = null) => {
     try {
       setErr("");
-      const r = await studentBoard(token);
+      const r = await studentBoard(token, w);
       if (!r.ok) return setErr(errorText(r.error));
       setData(r);
-    } catch (e) {
-      setErr(e.message);
-    }
+      return r;
+    } catch (e) { setErr(e.message); }
   }, [token]);
 
-  useEffect(() => { load(); }, [load]);
-  useEffect(() => { if (!pop) return; const t = setTimeout(() => setPop(null), 1600); return () => clearTimeout(t); }, [pop]);
-  useEffect(() => { if (!just) return; const t = setTimeout(() => setJust(null), 900); return () => clearTimeout(t); }, [just]);
-  useEffect(() => { if (!ringKey) return; const t = setTimeout(() => setRingKey(null), 1000); return () => clearTimeout(t); }, [ringKey]);
+  useEffect(() => { load(week); }, [load, week]);
+  useEffect(() => { if (!pop) return; const t = setTimeout(() => setPop(null), 1500); return () => clearTimeout(t); }, [pop]);
+  useEffect(() => { if (!seal) return; const t = setTimeout(() => setSeal(false), 1800); return () => clearTimeout(t); }, [seal]);
 
-  const onDone = async (a, pages) => {
-    setBusy(true);
+  /* بعد أي إنجاز: حدّث، وافتح السؤال إن اكتمل الأسبوع */
+  const afterProgress = async (added) => {
+    if (added) setPop({ k: Date.now(), n: added });
+    const r = await load(week);
+    const p = r?.plan;
+    if (p?.needs_answer) { setSeal(true); setTimeout(() => setAskOpen(true), 900); }
+    else if (p?.complete && p?.all_done) setSeal(true);
+  };
+
+  const sendAnswer = async () => {
+    if (!answer.trim()) return;
+    setSaving(true);
     try {
-      const r = await markDone(token, a.id, pages);
+      const r = await answerWeek(token, data.plan.plan_id, answer.trim());
       if (!r.ok) return toast(errorText(r.error));
-      setJust(a.id);
-      setRingKey(Date.now());
-      setPop({
-        k: Date.now(),
-        n: a.kind === "audio" ? a.amount : pages,
-        color: a.kind === "audio" ? "var(--audio)" : "var(--book)",
-      });
-      await load();
-    } catch (e) {
-      toast(e.message);
-    } finally {
-      setBusy(false);
-    }
+      setAskOpen(false); setAnswer(""); setSeal(true);
+      toast("اكتمل أسبوعك 🎉");
+      await load(week);
+    } catch (e) { toast(e.message); }
+    finally { setSaving(false); }
   };
 
-  const onUndo = async (a) => {
-    setBusy(true);
-    try {
-      const r = await unmarkDone(token, a.id);
-      if (!r.ok) return toast(errorText(r.error));
-      toast("رجّعناه غير مكتمل");
-      await load();
-    } catch (e) {
-      toast(e.message);
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const wk = useMemo(() => weekDays().map(iso), []);
-  const T = todayIso();
-
-  /* تمرير بين الأيام على الجوال */
-  const onTouchStart = (e) => { touch.current = e.touches[0].clientX; };
-  const onTouchEnd = (e) => {
-    if (touch.current === null) return;
-    const dx = e.changedTouches[0].clientX - touch.current;
-    touch.current = null;
-    if (Math.abs(dx) < 60) return;
-    const i = wk.indexOf(sel);
-    const next = dx < 0 ? i - 1 : i + 1;
-    if (next >= 0 && next < 7) { setSel(wk[next]); buzz(8); }
-  };
-
-  if (err) return <Failed text={err} onRetry={load} />;
+  if (err) return <Failed text={err} onRetry={() => load(week)} />;
   if (!data) return <Loading />;
 
-  const all = data.assignments || [];
-  const wkItems = all.filter((a) => wk.includes(a.due_date));
-  const dayItems = all.filter((a) => a.due_date === sel);
-  const doneCount = wkItems.filter((a) => a.done).length;
-  const pct = wkItems.length ? Math.round((doneCount / wkItems.length) * 100) : 0;
-  const late = all.filter((a) => a.due_date < T && !a.done);
-  const board = data.board || [];
-
-  const todayItems = all.filter((a) => a.due_date === T);
-  const todayDone = todayItems.length > 0 && todayItems.every((a) => a.done);
-
-  const streak = calcStreak(all);
-  const best = bestStreak(all);
+  const plan = data.plan;
+  const clips = data.clips || [];
+  const streak = calcStreak(data.daily);
+  const cur = data.week_start;
+  const isThis = cur === thisWeekStart();
+  const q = plan?.question;
 
   return (
     <>
-      <Hero
-        eyebrow="مجموع ما أنجزته"
-        value={Number(data.minutes) || 0}
-        unit="دقيقة"
-        value2={Number(data.pages) || 0}
-        unit2="صفحة"
-        pct={pct}
-        pop={pop}
-        ringKey={ringKey}
-        streak={streak}
-        foot={
-          <>
-            <b>{doneCount}</b> من {wkItems.length} مقرر هذا الأسبوع
-            <span className="dot" />
-            <b>{pct}%</b>
-            {late.length > 0 && (
-              <>
-                <span className="dot" />
-                <span className="late">{late.length} متأخر</span>
-              </>
-            )}
-          </>
-        }
-      />
-
-      {todayDone && tab === "now" && (
-        <div className="cheer">
-          <span className="big">{streak > 1 ? "🔥" : "✓"}</span>
-          <div>
-            <h4>
-              {streak > 1 ? `${streak} أيام متتالية` : "أنهيت مقررات اليوم"}
-            </h4>
-            <p>
-              خلّصت {todayItems.length} من {todayItems.length}.
-              {streak > 1 ? " واصل بكرة عشان ما تنكسر السلسلة." : " تقدر تبدأ بمقررات بكرة لو حاب."}
-            </p>
+      {/* ===== الرأس ===== */}
+      <div className="hero">
+        {pop && <div className="pop" key={pop.k}>+{pop.n}</div>}
+        <p className="eyebrow en" style={{ animationDelay: "40ms" }}>مجموع ما أنجزته</p>
+        <div className="duo en" style={{ animationDelay: "90ms" }}>
+          <div className="duonum audio">
+            <Odometer value={Number(data.total_minutes) || 0} delay={420} />
+            <span className="unit">دقيقة</span>
+          </div>
+          <span className="duosep" />
+          <div className="duonum book">
+            <Odometer value={Number(data.total_pages) || 0} delay={540} />
+            <span className="unit">صفحة</span>
           </div>
         </div>
-      )}
+        {streak > 1 && (
+          <div className="en" style={{ animationDelay: "300ms", marginTop: 12 }}>
+            <span className="streak">🔥 <b>{streak}</b> أيام متتالية</span>
+          </div>
+        )}
+      </div>
 
       <div className="tabs en" style={{ animationDelay: "340ms" }}>
-        <button className={`tab ${tab === "now" ? "on" : ""}`} onClick={() => setTab("now")}>مقرراتي</button>
+        <button className={`tab ${tab === "now" ? "on" : ""}`} onClick={() => setTab("now")}>أسبوعي</button>
         <button className={`tab ${tab === "rec" ? "on" : ""}`} onClick={() => setTab("rec")}>سجلّي</button>
       </div>
 
       {tab === "rec" && (
-        <Record
-          assignments={all}
-          minutes={Number(data.minutes) || 0}
-          pages={Number(data.pages) || 0}
-          streak={streak}
-          best={best}
-        />
+        <Record daily={data.daily} minutes={Number(data.total_minutes) || 0}
+          pages={Number(data.total_pages) || 0} streak={streak} weeks={data.weeks} />
       )}
 
       {tab === "now" && (
         <>
-          <Rail items={wkItems} sel={sel} onSel={setSel} />
-          <p className="swipehint">اسحب يمين أو يسار للتنقّل بين الأيام</p>
-
-          <div className="two">
-            <div onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
-              <div
-                className="en"
-                style={{ animationDelay: "400ms", display: "flex", alignItems: "baseline", gap: 10, margin: "20px 0 4px" }}
-              >
-                <h2 className="disp" style={{ fontSize: 17 }}>
-                  {sel === T ? "مقررات اليوم" : `مقررات ${fmtDate(sel)}`}
-                </h2>
-                <small className="pill">
-                  {dayItems.length ? `${dayItems.filter((a) => a.done).length}/${dayItems.length}` : ""}
-                </small>
-                {sel === T && dayItems.length > 0 && !todayDone && streak > 0 && (
-                  <small style={{ fontSize: 12, color: "var(--book)" }}>
-                    أكمل اليوم وتصير سلسلتك {streak + 1} 🔥
-                  </small>
-                )}
-              </div>
-
-              <div className="ledger">
-                {dayItems.length === 0 ? (
-                  <div className="empty en" style={{ animationDelay: "460ms" }}>
-                    <b>ما فيه مقررات في هذا اليوم</b>
-                    اختر يومًا من الشريط فوق.
-                  </div>
-                ) : (
-                  dayItems.map((a, i) => (
-                    <Row key={a.id} a={a} i={i} onDone={onDone} onUndo={onUndo} just={just} busy={busy} />
-                  ))
-                )}
-              </div>
+          {/* شريط التنقل بين الأسابيع */}
+          <div className="weeknav en" style={{ animationDelay: "380ms" }}>
+            <button className="navb" onClick={() => setWeek(iso(addDays(parse(cur), -7)))}
+              aria-label="الأسبوع السابق">‹</button>
+            <div className="weektitle">
+              <b>{weekLabel(cur)}</b>
+              <small>{relWeek(cur)}{plan?.is_makeup ? " · أسبوع تعويض" : ""}</small>
             </div>
+            <button className="navb" disabled={isThis}
+              onClick={() => setWeek(iso(addDays(parse(cur), 7)))}
+              aria-label="الأسبوع التالي">›</button>
+          </div>
 
-            <aside className="en" style={{ animationDelay: "540ms" }}>
-              {late.length > 0 && (
-                <div className="warn">
-                  <h4>{late.length} مقرر فات موعده</h4>
-                  {late.slice(0, 3).map((a) => (
-                    <p key={a.id}>{a.title}</p>
-                  ))}
+          {!plan ? (
+            <div className="empty en" style={{ animationDelay: "440ms" }}>
+              <b>ما فيه خطة لهذا الأسبوع</b>
+              مشرفك ما نزّل مقررات بعد.
+            </div>
+          ) : (
+            <>
+              {/* لوحة التقدّم */}
+              <div className="progpanel en" style={{ animationDelay: "400ms" }}>
+                <Ring pct={plan.pct} size={104}
+                  color={plan.complete ? "var(--ok)" : "var(--audio)"}>
+                  <b className="rv"><Odometer value={plan.pct} delay={420} /><i>%</i></b>
+                </Ring>
+
+                <div className="pacebox">
+                  {plan.complete ? (
+                    <>
+                      <h4 className="ok">اكتمل أسبوعك</h4>
+                      <p>أنجزت كل شيء وأجبت عن السؤال.</p>
+                    </>
+                  ) : plan.needs_answer ? (
+                    <>
+                      <h4 className="warnc">باقي السؤال</h4>
+                      <p>أنهيت كل المقررات — أجب عن سؤال الأسبوع ليكتمل.</p>
+                      <button className="btn" style={{ marginTop: 10 }}
+                        onClick={() => setAskOpen(true)}>أجب الآن</button>
+                    </>
+                  ) : plan.days_left > 0 ? (
+                    <>
+                      <h4>وتيرتك اليوم</h4>
+                      <p className="pacetext">
+                        {plan.book && plan.book.pages_left > 0 && (
+                          <span><b>{plan.pace_pages}</b> صفحة</span>
+                        )}
+                        {plan.book && plan.book.pages_left > 0 && plan.clips_total - plan.clips_done > 0 && " · "}
+                        {plan.clips_total - plan.clips_done > 0 && (
+                          <span><b>{plan.pace_clips}</b> مقطع</span>
+                        )}
+                      </p>
+                      <small>
+                        باقي {plan.days_left} {plan.days_left === 1 ? "يوم" : "أيام"} في الأسبوع
+                      </small>
+                    </>
+                  ) : (
+                    <>
+                      <h4 className="late">انتهى الأسبوع</h4>
+                      <p>أُغلق ناقصًا. انتظر أسبوع تعويض من مشرفك.</p>
+                    </>
+                  )}
                 </div>
+              </div>
+
+              {/* أيام الأسبوع */}
+              <div className="rail en" style={{ animationDelay: "420ms" }}>
+                {weekDaysOf(cur).map((d) => {
+                  const k = iso(d);
+                  const n = (data.daily || []).filter((x) => x.d === k)
+                              .reduce((s, x) => s + Number(x.n), 0);
+                  return (
+                    <div key={k} className={`rday ${k === todayIso() ? "today" : ""} ${n > 0 ? "hit" : ""}`}>
+                      <span className="dn">{DL[d.getDay()]}</span>
+                      <span className="dd">{d.getDate()}</span>
+                      <span className="rdot" />
+                    </div>
+                  );
+                })}
+              </div>
+
+              {plan.book && (
+                <BookCard book={plan.book} planId={plan.plan_id} token={token}
+                  onSaved={afterProgress} toast={toast} />
               )}
 
-              <div className="blk">
-                <h4>متصدرو {me.grade}</h4>
-                {board.map((s, i) => (
-                  <div key={s.id} className={`lead ${s.id === me.id ? "me" : ""}`}>
-                    <span className="rk">{i + 1}</span>
-                    <span>{s.id === me.id ? "أنت" : s.name.split(" ")[0]}</span>
-                    <span className="pt">{s.done}</span>
-                  </div>
-                ))}
-              </div>
-            </aside>
-          </div>
+              {clips.length > 0 && (
+                <ClipsCard clips={clips} token={token} onSaved={afterProgress}
+                  toast={toast} delay={plan.book ? 500 : 440} />
+              )}
+
+              {!plan.book && clips.length === 0 && (
+                <div className="empty en" style={{ animationDelay: "460ms" }}>
+                  <b>الخطة فاضية</b>
+                  مشرفك أنشأ الأسبوع لكن ما أضاف كتابًا ولا مقاطع.
+                </div>
+              )}
+            </>
+          )}
         </>
       )}
+
+      {/* ===== سؤال خاتمة الأسبوع ===== */}
+      <Modal open={askOpen} onClose={() => setAskOpen(false)} title="سؤال الأسبوع">
+        <p className="qtext">{q?.text}</p>
+
+        {q?.kind === "choice" ? (
+          <div className="choices">
+            {(q.options || []).map((o, i) => (
+              <button key={i}
+                className={`choice ${answer === o ? "on" : ""}`}
+                onClick={() => { setAnswer(o); buzz(8); }}>
+                {o}
+              </button>
+            ))}
+          </div>
+        ) : (
+          <textarea className="ta" rows={5} value={answer}
+            onChange={(e) => setAnswer(e.target.value)}
+            placeholder="اكتب إجابتك هنا..." />
+        )}
+
+        <div className="modalrow">
+          <button className="btn ghostbtn" onClick={() => setAskOpen(false)}>لاحقًا</button>
+          <button className="btn" disabled={!answer.trim() || saving} onClick={sendAnswer}>
+            أرسل الإجابة
+          </button>
+        </div>
+      </Modal>
+
+      <Seal show={seal} />
     </>
   );
 }

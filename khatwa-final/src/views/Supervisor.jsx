@@ -1,350 +1,456 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { supervisorBoard, saveAssignment, deleteAssignment, errorText } from "../lib/api";
-import { Hero, Bar, Loading, Failed, fmtDate } from "../components/UI";
-import { todayIso } from "../lib/helpers";
+import {
+  supervisorBoard, savePlan, deletePlan, markReviewed, errorText,
+} from "../lib/api";
+import { Odometer, Ring, Bar, Modal, Loading, Failed, buzz } from "../components/UI";
+import {
+  thisWeekStart, weekLabel, relWeek, iso, addDays, parse, pctClass, fmtDate,
+} from "../lib/helpers";
 
-const EMPTY = { id: null, kind: "audio", title: "", url: "", amount: "", due_date: todayIso() };
+const EMPTY_CLIP = { title: "", url: "", minutes: "" };
 
-export default function Supervisor({ me, token, toast }) {
-  const [data, setData] = useState(null);
-  const [err, setErr] = useState("");
-  const [tab, setTab] = useState("class");
-  const [f, setF] = useState(EMPTY);
-  const [q, setQ] = useState("");
+/* ================= محرّر الخطة ================= */
+function PlanEditor({ weekStart, plan, token, onDone, toast }) {
+  const [book, setBook] = useState({
+    title: plan?.book_title || "",
+    from: plan?.page_from ? String(plan.page_from) : "",
+    to: plan?.page_to ? String(plan.page_to) : "",
+  });
+  const [clips, setClips] = useState(
+    plan?.clips?.length
+      ? plan.clips.map((c) => ({ title: c.title, url: c.url, minutes: String(c.minutes) }))
+      : []
+  );
+  const [q, setQ] = useState({
+    text: plan?.q_text || "",
+    kind: plan?.q_kind || "text",
+    options: plan?.q_options?.length ? plan.q_options : ["", ""],
+  });
+  const [makeup, setMakeup] = useState(!!plan?.is_makeup);
   const [busy, setBusy] = useState(false);
 
-  const load = useCallback(async () => {
-    try {
-      setErr("");
-      const r = await supervisorBoard(token);
-      if (!r.ok) return setErr(errorText(r.error));
-      setData(r);
-    } catch (e) {
-      setErr(e.message);
-    }
-  }, [token]);
+  const setClip = (i, k, v) =>
+    setClips((c) => c.map((x, j) => (j === i ? { ...x, [k]: v } : x)));
 
-  useEffect(() => {
-    load();
-  }, [load]);
+  const bookOk =
+    !book.title.trim() ||
+    (Number(book.from) >= 1 && Number(book.to) >= Number(book.from));
 
-  const submit = async () => {
-    if (!f.title.trim() || !f.amount) return;
+  const clipsOk = clips.every(
+    (c) => c.title.trim() && /^https?:\/\//.test(c.url.trim()) && Number(c.minutes) >= 1
+  );
+
+  const qOk =
+    !q.text.trim() ||
+    q.kind === "text" ||
+    q.options.filter((o) => o.trim()).length >= 2;
+
+  const save = async () => {
+    if (!bookOk || !clipsOk || !qOk) return;
     setBusy(true);
     try {
-      const r = await saveAssignment(token, f);
+      const r = await savePlan(token, {
+        week_start: weekStart,
+        book_title: book.title.trim() || null,
+        page_from: book.title.trim() ? Number(book.from) : null,
+        page_to: book.title.trim() ? Number(book.to) : null,
+        q_text: q.text.trim() || null,
+        q_kind: q.text.trim() ? q.kind : null,
+        q_options:
+          q.text.trim() && q.kind === "choice"
+            ? q.options.filter((o) => o.trim())
+            : null,
+        clips: clips.map((c) => ({
+          title: c.title.trim(), url: c.url.trim(), minutes: Number(c.minutes),
+        })),
+        is_makeup: makeup,
+      });
       if (!r.ok) return toast(errorText(r.error));
-      toast(f.id ? "حدّثنا المقرر" : `انضاف المقرر لطلاب ${me.grade}`);
-      setF(EMPTY);
-      setTab("list");
-      await load();
-    } catch (e) {
-      toast(e.message);
-    } finally {
-      setBusy(false);
-    }
+      buzz(16);
+      toast("انحفظت خطة الأسبوع");
+      onDone();
+    } catch (e) { toast(e.message); }
+    finally { setBusy(false); }
   };
 
-  const edit = (a) => {
-    setF({
-      id: a.id,
-      kind: a.kind,
-      title: a.title,
-      url: a.url || "",
-      amount: String(a.amount),
-      due_date: a.due_date,
-    });
-    setTab("add");
-  };
-
-  const remove = async (a) => {
-    if (!confirm(`تحذف "${a.title}"؟ بينحذف معه إنجاز الطلاب فيه، وما فيه رجعة.`)) return;
-    setBusy(true);
-    try {
-      const r = await deleteAssignment(token, a.id);
-      if (!r.ok) return toast("ما قدرنا نحذفه");
-      toast("انحذف المقرر");
-      await load();
-    } catch (e) {
-      toast(e.message);
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  if (err) return <Failed text={err} onRetry={load} />;
-  if (!data) return <Loading />;
-
-  const students = data.students || [];
-  const assignments = data.assignments || [];
-  const total = assignments.length;
-
-  const rows = students
-    .map((s) => ({
-      ...s,
-      pct: total ? Math.round((s.done / total) * 100) : 0,
-    }))
-    .sort((a, b) => b.pct - a.pct)
-    .filter((r) => !q.trim() || r.name.includes(q.trim()) || r.code.includes(q.trim()));
-
-  const behind = rows.filter((r) => r.late > 0);
-  const avg = rows.length ? Math.round(rows.reduce((x, r) => x + r.pct, 0) / rows.length) : 0;
-  const classMinutes = rows.reduce((x, r) => x + Number(r.minutes || 0), 0);
+  const pages =
+    book.from && book.to && Number(book.to) >= Number(book.from)
+      ? Number(book.to) - Number(book.from) + 1
+      : 0;
+  const totalMin = clips.reduce((s, c) => s + (Number(c.minutes) || 0), 0);
 
   return (
-    <>
-      <Hero
-        eyebrow={`متوسط إنجاز ${me.grade}`}
-        value={avg}
-        unit="٪"
-        pct={avg}
-        foot={
+    <div className="editor en" style={{ animationDelay: "380ms" }}>
+      {/* الكتاب */}
+      <section className="esec">
+        <div className="esechead">
+          <span className="utag book">كتاب</span>
+          <h4>مدى القراءة هذا الأسبوع</h4>
+        </div>
+        <div className="fl">
+          <label>اسم الكتاب <em>(اتركه فاضيًا لو ما فيه قراءة)</em></label>
+          <input value={book.title} placeholder="رياض الصالحين"
+            onChange={(e) => setBook({ ...book, title: e.target.value })} />
+        </div>
+        {book.title.trim() && (
           <>
-            <b>{students.length}</b> طالب
-            <span className="dot" />
-            <b>{total}</b> مقرر
-            <span className="dot" />
-            <b className="bk">{classMinutes}</b> دقيقة للصف
-            {behind.length > 0 && (
+            <div className="r2">
+              <div className="fl">
+                <label>من صفحة</label>
+                <input value={book.from} inputMode="numeric" placeholder="5"
+                  onChange={(e) => /^\d{0,4}$/.test(e.target.value) && setBook({ ...book, from: e.target.value })} />
+              </div>
+              <div className="fl">
+                <label>إلى صفحة</label>
+                <input value={book.to} inputMode="numeric" placeholder="30"
+                  onChange={(e) => /^\d{0,4}$/.test(e.target.value) && setBook({ ...book, to: e.target.value })} />
+              </div>
+            </div>
+            {pages > 0 && <p className="calc">= <b>{pages}</b> صفحة على ٧ أيام ≈ <b>{Math.ceil(pages / 7)}</b> يوميًا</p>}
+            {!bookOk && <p className="errline">"إلى" لازم يكون أكبر من "من".</p>}
+          </>
+        )}
+      </section>
+
+      {/* المقاطع */}
+      <section className="esec">
+        <div className="esechead">
+          <span className="utag audio">مقاطع</span>
+          <h4>{clips.length ? `${clips.length} مقطع · ${totalMin} دقيقة` : "لا مقاطع"}</h4>
+        </div>
+
+        {clips.map((c, i) => (
+          <div key={i} className="clipedit">
+            <div className="fl">
+              <label>عنوان المقطع {i + 1}</label>
+              <input value={c.title} placeholder="أحكام النون الساكنة"
+                onChange={(e) => setClip(i, "title", e.target.value)} />
+            </div>
+            <div className="r2">
+              <div className="fl">
+                <label>الرابط</label>
+                <input value={c.url} dir="ltr" placeholder="https://"
+                  onChange={(e) => setClip(i, "url", e.target.value)} />
+              </div>
+              <div className="fl">
+                <label>الدقائق</label>
+                <input value={c.minutes} inputMode="numeric" placeholder="12"
+                  onChange={(e) => /^\d{0,3}$/.test(e.target.value) && setClip(i, "minutes", e.target.value)} />
+              </div>
+            </div>
+            <button className="undo" onClick={() => setClips(clips.filter((_, j) => j !== i))}>
+              احذف المقطع
+            </button>
+          </div>
+        ))}
+
+        <button className="btn ghostbtn" onClick={() => setClips([...clips, { ...EMPTY_CLIP }])}>
+          + أضف مقطعًا
+        </button>
+      </section>
+
+      {/* السؤال */}
+      <section className="esec">
+        <div className="esechead">
+          <span className="utag q">سؤال</span>
+          <h4>يظهر للطالب بعد إتمام كل المقررات</h4>
+        </div>
+        <div className="fl">
+          <label>نص السؤال <em>(اتركه فاضيًا لو ما تبي سؤالًا)</em></label>
+          <input value={q.text} placeholder="وش أهم فائدة خرجت فيها هذا الأسبوع؟"
+            onChange={(e) => setQ({ ...q, text: e.target.value })} />
+        </div>
+
+        {q.text.trim() && (
+          <>
+            <div className="fl">
+              <label>نوع الإجابة</label>
+              <div className="seg">
+                <button className={q.kind === "text" ? "on" : ""}
+                  onClick={() => setQ({ ...q, kind: "text" })}>نص يكتبه الطالب</button>
+                <button className={q.kind === "choice" ? "on" : ""}
+                  onClick={() => setQ({ ...q, kind: "choice" })}>اختيار من متعدد</button>
+              </div>
+            </div>
+
+            {q.kind === "choice" && (
               <>
-                <span className="dot" />
-                <span className="late">{behind.length} متأخرين</span>
+                {q.options.map((o, i) => (
+                  <div className="fl" key={i}>
+                    <label>الخيار {i + 1}</label>
+                    <input value={o}
+                      onChange={(e) =>
+                        setQ({ ...q, options: q.options.map((x, j) => (j === i ? e.target.value : x)) })} />
+                  </div>
+                ))}
+                <div className="modalrow" style={{ justifyContent: "flex-start" }}>
+                  {q.options.length < 6 && (
+                    <button className="undo" onClick={() => setQ({ ...q, options: [...q.options, ""] })}>
+                      + خيار
+                    </button>
+                  )}
+                  {q.options.length > 2 && (
+                    <button className="undo" onClick={() => setQ({ ...q, options: q.options.slice(0, -1) })}>
+                      − خيار
+                    </button>
+                  )}
+                </div>
+                {!qOk && <p className="errline">لازم خياران على الأقل بنص.</p>}
               </>
             )}
           </>
-        }
-      />
+        )}
+      </section>
 
-      <div className="tabs en" style={{ animationDelay: "330ms" }}>
-        <button className={`tab ${tab === "class" ? "on" : ""}`} onClick={() => setTab("class")}>
-          الطلاب
+      <label className="chk">
+        <input type="checkbox" checked={makeup} onChange={(e) => setMakeup(e.target.checked)} />
+        <span>أسبوع تعويض — لتدارك ما فات الطلاب</span>
+      </label>
+
+      <div className="modalrow" style={{ marginTop: 18 }}>
+        <button className="btn" onClick={save}
+          disabled={busy || !bookOk || !clipsOk || !qOk || (!book.title.trim() && clips.length === 0)}>
+          {plan ? "احفظ التعديل" : "أنشئ الخطة"}
         </button>
-        <button
-          className={`tab ${tab === "add" ? "on" : ""}`}
-          onClick={() => {
-            setF(EMPTY);
-            setTab("add");
-          }}
-        >
-          إضافة مقرر
-        </button>
-        <button className={`tab ${tab === "list" ? "on" : ""}`} onClick={() => setTab("list")}>
-          المقررات
+      </div>
+      {!book.title.trim() && clips.length === 0 && (
+        <p className="errline">أضف كتابًا أو مقطعًا واحدًا على الأقل.</p>
+      )}
+    </div>
+  );
+}
+
+/* ================= الواجهة ================= */
+export default function Supervisor({ me, token, toast }) {
+  const [data, setData] = useState(null);
+  const [err, setErr] = useState("");
+  const [tab, setTab] = useState("week");
+  const [week, setWeek] = useState(null);
+  const [editing, setEditing] = useState(false);
+  const [ans, setAns] = useState(null);
+
+  const load = useCallback(async (w = null) => {
+    try {
+      setErr("");
+      const r = await supervisorBoard(token, w);
+      if (!r.ok) return setErr(errorText(r.error));
+      setData(r);
+    } catch (e) { setErr(e.message); }
+  }, [token]);
+
+  useEffect(() => { load(week); }, [load, week]);
+
+  if (err) return <Failed text={err} onRetry={() => load(week)} />;
+  if (!data) return <Loading />;
+
+  const plan = data.plan;
+  const students = data.students || [];
+  const cur = data.week_start;
+  const isThis = cur === thisWeekStart();
+
+  const pcts = students.map((s) => s.summary?.pct || 0);
+  const avg = pcts.length ? Math.round(pcts.reduce((a, b) => a + b, 0) / pcts.length) : 0;
+  const completed = students.filter((s) => s.summary?.complete).length;
+  const answers = students.filter((s) => s.answer);
+  const unread = answers.filter((s) => !s.answer.reviewed).length;
+
+  const review = async (s, val) => {
+    try {
+      await markReviewed(token, plan.id, s.id, val);
+      buzz(8);
+      await load(week);
+    } catch (e) { toast(e.message); }
+  };
+
+  return (
+    <>
+      <div className="hero">
+        <p className="eyebrow en" style={{ animationDelay: "40ms" }}>متوسط إنجاز {me.grade}</p>
+        <div className="bignum en" style={{ animationDelay: "90ms" }}>
+          <Odometer value={avg} delay={420} />
+          <span className="unit">٪</span>
+        </div>
+        <div className="herofoot en" style={{ animationDelay: "240ms" }}>
+          <b>{students.length}</b> طالب
+          <span className="dot" />
+          <b>{completed}</b> أكملوا الأسبوع
+          {unread > 0 && (<><span className="dot" /><span className="warnc">{unread} إجابة جديدة</span></>)}
+        </div>
+      </div>
+
+      <div className="tabs en" style={{ animationDelay: "320ms" }}>
+        <button className={`tab ${tab === "week" ? "on" : ""}`} onClick={() => setTab("week")}>الأسبوع</button>
+        <button className={`tab ${tab === "students" ? "on" : ""}`} onClick={() => setTab("students")}>الطلاب</button>
+        <button className={`tab ${tab === "answers" ? "on" : ""}`} onClick={() => setTab("answers")}>
+          الإجابات{unread > 0 ? ` (${unread})` : ""}
         </button>
       </div>
 
-      {tab === "class" && (
-        <>
-          {behind.length > 0 && (
-            <div className="warn en" style={{ animationDelay: "380ms" }}>
-              <h4>{behind.length} طالب متأخرين</h4>
-              {behind.map((r) => (
-                <p key={r.id}>
-                  {r.name} — {r.late} مقرر
-                </p>
-              ))}
-            </div>
-          )}
+      {/* شريط الأسابيع */}
+      {tab !== "answers" && (
+        <div className="weeknav en" style={{ animationDelay: "350ms" }}>
+          <button className="navb" onClick={() => setWeek(iso(addDays(parse(cur), -7)))}>‹</button>
+          <div className="weektitle">
+            <b>{weekLabel(cur)}</b>
+            <small>{relWeek(cur)}{plan?.is_makeup ? " · تعويض" : ""}</small>
+          </div>
+          <button className="navb" onClick={() => setWeek(iso(addDays(parse(cur), 7)))}>›</button>
+        </div>
+      )}
 
-          <input
-            className="srch en"
-            style={{ animationDelay: "400ms" }}
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            placeholder="ابحث باسم الطالب أو رمزه..."
-          />
-          <div className="tablewrap en" style={{ animationDelay: "420ms" }}>
+      {/* ===== تبويب الأسبوع ===== */}
+      {tab === "week" && (
+        editing || !plan ? (
+          <>
+            {plan && (
+              <button className="undo" style={{ marginBottom: 14 }} onClick={() => setEditing(false)}>
+                ← رجوع بلا حفظ
+              </button>
+            )}
+            <PlanEditor weekStart={cur} plan={plan} token={token} toast={toast}
+              onDone={() => { setEditing(false); load(week); }} />
+          </>
+        ) : (
+          <div className="en" style={{ animationDelay: "380ms" }}>
+            <div className="planview">
+              {plan.book_title && (
+                <div className="unit book">
+                  <div className="unithead">
+                    <span className="utag book">كتاب</span>
+                    <h3>{plan.book_title}</h3>
+                  </div>
+                  <p className="planline">
+                    من صفحة <b>{plan.page_from}</b> إلى <b>{plan.page_to}</b>
+                    <span className="dot" />
+                    {plan.page_to - plan.page_from + 1} صفحة
+                  </p>
+                </div>
+              )}
+
+              {plan.clips?.length > 0 && (
+                <div className="unit">
+                  <div className="unithead">
+                    <span className="utag audio">مقاطع</span>
+                    <h3>{plan.clips.length} مقطع</h3>
+                  </div>
+                  {plan.clips.map((c) => (
+                    <p className="planline" key={c.id}>
+                      {c.title} <span className="pill">{c.minutes} د</span>
+                    </p>
+                  ))}
+                </div>
+              )}
+
+              {plan.q_text && (
+                <div className="unit">
+                  <div className="unithead">
+                    <span className="utag q">سؤال</span>
+                    <h3>{plan.q_kind === "choice" ? "اختيار من متعدد" : "إجابة مكتوبة"}</h3>
+                  </div>
+                  <p className="planline">{plan.q_text}</p>
+                </div>
+              )}
+            </div>
+
+            <div className="modalrow" style={{ marginTop: 18 }}>
+              <button className="btn" onClick={() => setEditing(true)}>عدّل الخطة</button>
+              <button className="btn danger" onClick={async () => {
+                if (!confirm("تحذف خطة هذا الأسبوع؟ بينحذف معها تقدّم الطلاب فيها، وما فيه رجعة.")) return;
+                const r = await deletePlan(token, plan.id);
+                if (r.ok) { toast("انحذفت الخطة"); load(week); }
+              }}>احذف</button>
+            </div>
+          </div>
+        )
+      )}
+
+      {/* ===== تبويب الطلاب ===== */}
+      {tab === "students" && (
+        <div className="tablewrap en" style={{ animationDelay: "380ms" }}>
+          {students.length === 0 ? (
+            <div className="empty"><b>ما فيه طلاب</b>المشرف التنفيذي يضيفهم.</div>
+          ) : (
             <table>
               <thead>
                 <tr>
-                  <th>الطالب</th>
-                  <th>الرمز</th>
-                  <th style={{ width: 150 }}>الإنجاز</th>
-                  <th>دقائق</th>
-                  <th>صفحات</th>
-                  <th>متأخر</th>
+                  <th>الطالب</th><th>الرمز</th><th style={{ width: 140 }}>هذا الأسبوع</th>
+                  <th>الكتاب</th><th>المقاطع</th><th>السؤال</th>
                 </tr>
               </thead>
               <tbody>
-                {rows.length === 0 ? (
-                  <tr>
-                    <td colSpan={6} style={{ color: "var(--muted)" }}>
-                      ما فيه طلاب في هذا الصف بعد. المشرف التنفيذي يضيفهم.
-                    </td>
-                  </tr>
-                ) : (
-                  rows.map((r) => (
-                    <tr key={r.id}>
-                      <td>{r.name}</td>
-                      <td data-l="الرمز">
-                        <span className="pill">{r.code}</span>
-                      </td>
-                      <td data-l="الإنجاز">
+                {students.map((s, i) => {
+                  const u = s.summary;
+                  return (
+                    <tr key={s.id} className="en" style={{ animationDelay: `${400 + i * 45}ms` }}>
+                      <td>{s.name}</td>
+                      <td data-l="الرمز"><span className="pill">{s.code}</span></td>
+                      <td data-l="هذا الأسبوع">
                         <div className="cellbar">
-                          <Bar pct={r.pct} />
-                          <span className="pill">
-                            {r.done}/{total}
-                          </span>
+                          <Bar pct={u?.pct || 0} tone={u?.complete ? "high" : pctClass(u?.pct || 0)} />
+                          <span className="pill">{u?.pct || 0}%</span>
                         </div>
                       </td>
-                      <td data-l="دقائق">
-                        <span className="pill">{r.minutes}</span>
-                      </td>
-                      <td data-l="صفحات">
-                        <span className="pill">{r.pages}</span>
-                      </td>
-                      <td data-l="متأخر">
-                        <span
-                          className="pill"
-                          style={{ color: r.late ? "var(--alert)" : "var(--muted)" }}
-                        >
-                          {r.late}
+                      <td data-l="الكتاب">
+                        <span className="pill">
+                          {u?.book ? `${u.book.current_page}/${u.book.page_to}` : "—"}
                         </span>
                       </td>
+                      <td data-l="المقاطع">
+                        <span className="pill">{u ? `${u.clips_done}/${u.clips_total}` : "—"}</span>
+                      </td>
+                      <td data-l="السؤال">
+                        {s.answer ? (
+                          <button className="mini ok" onClick={() => setAns(s)}>قرأ ✓</button>
+                        ) : u?.needs_answer ? (
+                          <span className="mini warn">منتظر</span>
+                        ) : (
+                          <span className="pill">—</span>
+                        )}
+                      </td>
                     </tr>
-                  ))
-                )}
+                  );
+                })}
               </tbody>
             </table>
-          </div>
-        </>
-      )}
-
-      {tab === "add" && (
-        <div className="form en" style={{ animationDelay: "380ms" }}>
-          <div className="fl">
-            <label>نوع المقرر</label>
-            <div className="seg">
-              <button
-                className={f.kind === "audio" ? "on" : ""}
-                onClick={() => setF({ ...f, kind: "audio" })}
-              >
-                مقطع بالدقائق
-              </button>
-              <button
-                className={f.kind === "book" ? "on" : ""}
-                onClick={() => setF({ ...f, kind: "book" })}
-              >
-                كتاب بالصفحات
-              </button>
-            </div>
-          </div>
-
-          <div className="fl">
-            <label>العنوان</label>
-            <input
-              value={f.title}
-              onChange={(e) => setF({ ...f, title: e.target.value })}
-              placeholder={f.kind === "audio" ? "شرح الكسور الاعتيادية" : "العلوم — الفصل الثالث"}
-            />
-          </div>
-
-          {f.kind === "audio" && (
-            <div className="fl">
-              <label>رابط المقطع</label>
-              <input
-                value={f.url}
-                onChange={(e) => setF({ ...f, url: e.target.value })}
-                placeholder="https://"
-                dir="ltr"
-              />
-            </div>
-          )}
-
-          <div className="r2">
-            <div className="fl">
-              <label>{f.kind === "audio" ? "الدقائق" : "الصفحات"}</label>
-              <input
-                value={f.amount}
-                inputMode="numeric"
-                placeholder="0"
-                onChange={(e) =>
-                  /^\d{0,3}$/.test(e.target.value) && setF({ ...f, amount: e.target.value })
-                }
-              />
-            </div>
-            <div className="fl">
-              <label>تاريخ التسليم</label>
-              <input
-                type="date"
-                value={f.due_date}
-                onChange={(e) => setF({ ...f, due_date: e.target.value })}
-              />
-            </div>
-          </div>
-
-          <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-            <button
-              className="btn"
-              onClick={submit}
-              disabled={!f.title.trim() || !f.amount || busy || (f.kind === "audio" && !f.url.trim())}
-            >
-              {f.id ? "احفظ التعديل" : "أضف المقرر"}
-            </button>
-            {f.id && (
-              <button className="undo" onClick={() => setF(EMPTY)}>
-                إلغاء التعديل
-              </button>
-            )}
-          </div>
-
-          {f.kind === "audio" && !f.url.trim() && (
-            <p style={{ fontSize: 12, color: "var(--muted)", marginTop: 10 }}>
-              المقطع لازم له رابط عشان الطالب يقدر يسمعه.
-            </p>
           )}
         </div>
       )}
 
-      {tab === "list" && (
-        <div className="tablewrap en" style={{ animationDelay: "380ms" }}>
-          <table>
-            <thead>
-              <tr>
-                <th>المقرر</th>
-                <th>المقدار</th>
-                <th>التاريخ</th>
-                <th>أنجزه</th>
-                <th />
-              </tr>
-            </thead>
-            <tbody>
-              {assignments.length === 0 ? (
-                <tr>
-                  <td colSpan={5} style={{ color: "var(--muted)" }}>
-                    ما أضفت مقررات بعد.
-                  </td>
-                </tr>
-              ) : (
-                assignments.map((a) => (
-                  <tr key={a.id}>
-                    <td>{a.title}</td>
-                    <td data-l="المقدار">
-                      <span className={`tag ${a.kind}`}>
-                        {a.kind === "audio" ? `${a.amount} د` : `${a.amount} ص`}
-                      </span>
-                    </td>
-                    <td data-l="التاريخ">{fmtDate(a.due_date)}</td>
-                    <td data-l="أنجزه">
-                      <span className="pill">
-                        {a.done_count}/{data.total_students}
-                      </span>
-                    </td>
-                    <td data-l="" style={{ whiteSpace: "nowrap" }}>
-                      <button className="btn sm" onClick={() => edit(a)} disabled={busy}>
-                        عدّل
-                      </button>{" "}
-                      <button className="btn sm danger" onClick={() => remove(a)} disabled={busy}>
-                        احذف
-                      </button>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+      {/* ===== تبويب الإجابات ===== */}
+      {tab === "answers" && (
+        <div className="en" style={{ animationDelay: "380ms" }}>
+          {answers.length === 0 ? (
+            <div className="empty"><b>ما فيه إجابات بعد</b>تظهر هنا لمّا يكمل الطلاب أسبوعهم.</div>
+          ) : (
+            answers.map((s, i) => (
+              <div key={s.id} className={`answer en ${s.answer.reviewed ? "read" : ""}`}
+                   style={{ animationDelay: `${400 + i * 60}ms` }}>
+                <div className="ahead">
+                  <b>{s.name}</b>
+                  <span className="pill">{fmtDate(s.answer.at.slice(0, 10))}</span>
+                  <button className={`mini ${s.answer.reviewed ? "ok" : ""}`}
+                    onClick={() => review(s, !s.answer.reviewed)}>
+                    {s.answer.reviewed ? "مراجَعة ✓" : "علّم مراجَعة"}
+                  </button>
+                </div>
+                <p className="atext">{s.answer.text}</p>
+              </div>
+            ))
+          )}
         </div>
       )}
+
+      {/* نافذة إجابة طالب */}
+      <Modal open={!!ans} onClose={() => setAns(null)} title={ans?.name}>
+        <p className="qtext">{plan?.q_text}</p>
+        <p className="atext" style={{ marginBottom: 18 }}>{ans?.answer?.text}</p>
+        <div className="modalrow">
+          <button className="btn ghostbtn" onClick={() => setAns(null)}>إغلاق</button>
+          <button className="btn" onClick={() => { review(ans, !ans.answer.reviewed); setAns(null); }}>
+            {ans?.answer?.reviewed ? "ألغِ المراجعة" : "علّم مراجَعة"}
+          </button>
+        </div>
+      </Modal>
     </>
   );
 }

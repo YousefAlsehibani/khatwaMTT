@@ -1,15 +1,19 @@
-import React, { useState, useEffect } from "react";
-import { DN, DL, iso, todayIso, weekDays, fmtDate, pctClass } from "../lib/helpers";
+import React, { useState, useEffect, useRef } from "react";
 
-/* اهتزاز خفيف على الجوال */
+/* اهتزاز خفيف */
 export const buzz = (ms = 12) => {
   try { navigator.vibrate?.(ms); } catch (e) { /* غير مدعوم */ }
 };
 
-/* عدّاد بكرات يلف */
+const reduced = () =>
+  typeof window !== "undefined" &&
+  window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+
+/* ============ عدّاد بكرات ============ */
 export function Odometer({ value, delay = 0 }) {
-  const [v, setV] = useState(0);
+  const [v, setV] = useState(reduced() ? value : 0);
   useEffect(() => {
+    if (reduced()) { setV(value); return; }
     const t = setTimeout(() => setV(value), delay);
     return () => clearTimeout(t);
   }, [value, delay]);
@@ -27,12 +31,10 @@ export function Odometer({ value, delay = 0 }) {
               className="col"
               style={{
                 transform: `translateY(-${Number(c) * 10}%)`,
-                transitionDelay: `${(width - i - 1) * 90}ms`,
+                transitionDelay: `${(width - i - 1) * 85}ms`,
               }}
             >
-              {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map((n) => (
-                <span key={n}>{n}</span>
-              ))}
+              {[0,1,2,3,4,5,6,7,8,9].map((n) => <span key={n}>{n}</span>)}
             </span>
           </span>
         );
@@ -41,92 +43,106 @@ export function Odometer({ value, delay = 0 }) {
   );
 }
 
-/* الرقم البطل — يقبل رقمًا واحدًا أو رقمين متساويين في الأهمية */
-export function Hero({ eyebrow, value, unit, value2, unit2, pct, foot, pop, ringKey, streak }) {
-  const dual = value2 !== undefined && value2 !== null;
+/* ============ حلقة تقدّم ============ */
+export function Ring({ pct, size = 92, stroke = 7, color = "var(--audio)", children }) {
+  const r = (size - stroke) / 2;
+  const c = 2 * Math.PI * r;
+  const [p, setP] = useState(reduced() ? pct : 0);
+  useEffect(() => {
+    if (reduced()) { setP(pct); return; }
+    const t = setTimeout(() => setP(pct), 260);
+    return () => clearTimeout(t);
+  }, [pct]);
 
   return (
-    <div className="hero">
-      {pop && (
-        <div className="pop" key={pop.k} style={{ color: pop.color }}>
-          +{pop.n}
-        </div>
-      )}
-      {ringKey && <div className="ring" key={"r" + ringKey} />}
-
-      <p className="eyebrow en" style={{ animationDelay: "40ms" }}>
-        {eyebrow}
-      </p>
-
-      {dual ? (
-        <div className="duo en" style={{ animationDelay: "90ms" }}>
-          <div className="duonum audio">
-            <Odometer value={value} delay={430} />
-            <span className="unit">{unit}</span>
-          </div>
-          <span className="duosep" />
-          <div className="duonum book">
-            <Odometer value={value2} delay={560} />
-            <span className="unit">{unit2}</span>
-          </div>
-        </div>
-      ) : (
-        <div className="bignum en" style={{ animationDelay: "90ms" }}>
-          <Odometer value={value} delay={430} />
-          <span className="unit">{unit}</span>
-        </div>
-      )}
-
-      <div className={`gauge en ${pct >= 100 ? "full" : ""}`} style={{ animationDelay: "200ms" }}>
-        <i style={{ width: `${pct}%` }} />
-      </div>
-      <div className="herofoot en" style={{ animationDelay: "260ms" }}>
-        {foot}
-      </div>
-      {streak > 1 && (
-        <div className="en" style={{ animationDelay: "320ms", marginTop: 10 }}>
-          <span className="streak">🔥 <b>{streak}</b> أيام متتالية</span>
-        </div>
-      )}
+    <div className="ringwrap" style={{ width: size, height: size }}>
+      <svg width={size} height={size} className="ringsvg" aria-hidden="true">
+        <circle cx={size/2} cy={size/2} r={r} fill="none"
+          stroke="var(--hair)" strokeWidth={stroke} />
+        <circle cx={size/2} cy={size/2} r={r} fill="none"
+          stroke={color} strokeWidth={stroke} strokeLinecap="round"
+          strokeDasharray={c}
+          strokeDashoffset={c - (c * Math.min(p, 100)) / 100}
+          className="ringbar" />
+      </svg>
+      <div className="ringmid">{children}</div>
     </div>
   );
 }
 
-/* شريط أيام الأسبوع */
-export function Rail({ items, sel, onSel }) {
-  const days = weekDays();
-  const T = todayIso();
+/* ============ شريط صفحات الكتاب ============
+   يُرسم كحافة كتاب: خطوط رفيعة تمتلئ بالتتابع */
+export function BookGauge({ from, to, current }) {
+  const total = Math.max(to - from + 1, 1);
+  const done = Math.max(Math.min(current, to) - from + 1, 0);
+  const n = Math.min(total, 44);
+  const filled = Math.round((done / total) * n);
+
   return (
-    <div className="rail en" style={{ animationDelay: "360ms" }}>
-      {days.map((d) => {
-        const k = iso(d);
-        const dayItems = items.filter((a) => a.due_date === k);
-        const off = d.getDay() === 5 || d.getDay() === 6;
-        const allOk = dayItems.length > 0 && dayItems.every((a) => a.done);
-        return (
-          <button
-            key={k}
-            className={`rday ${sel === k ? "on" : ""} ${off ? "off" : ""} ${k === T ? "today" : ""} ${allOk ? "allok" : ""}`}
-            onClick={() => { onSel(k); buzz(8); }}
-            aria-label={`${DN[d.getDay()]} ${d.getDate()}`}
-          >
-            <span className="dn">{DL[d.getDay()]}</span>
-            <span className="dd">{d.getDate()}</span>
-            <span className="pips">
-              {dayItems.slice(0, 4).map((a) => (
-                <i key={a.id} className={`pip ${a.done ? a.kind : ""}`} />
-              ))}
-            </span>
-          </button>
-        );
-      })}
+    <div className="bookgauge" role="img"
+      aria-label={`${done} من ${total} صفحة`}>
+      {Array.from({ length: n }, (_, i) => (
+        <i key={i} className={i < filled ? "on" : ""}
+           style={{ transitionDelay: `${i * 16}ms` }} />
+      ))}
     </div>
   );
 }
 
-export const Bar = ({ pct }) => (
+/* ============ علامة صح تُرسم ============ */
+export function CheckMark({ on }) {
+  return (
+    <span className={`check ${on ? "on" : ""}`} aria-hidden="true">
+      <svg viewBox="0 0 24 24">
+        <circle cx="12" cy="12" r="10.5" className="cbg" />
+        <path d="M7 12.4l3.4 3.3L17 8.9" className="cpath" />
+      </svg>
+    </span>
+  );
+}
+
+/* ============ نافذة ============ */
+export function Modal({ open, onClose, title, children, wide }) {
+  const box = useRef(null);
+  useEffect(() => {
+    if (!open) return;
+    const esc = (e) => e.key === "Escape" && onClose?.();
+    document.addEventListener("keydown", esc);
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.removeEventListener("keydown", esc);
+      document.body.style.overflow = "";
+    };
+  }, [open, onClose]);
+
+  if (!open) return null;
+  return (
+    <div className="backdrop" onMouseDown={(e) => e.target === e.currentTarget && onClose?.()}>
+      <div className={`modal ${wide ? "wide" : ""}`} ref={box} role="dialog" aria-modal="true">
+        {title && <h3 className="modaltitle disp">{title}</h3>}
+        {children}
+      </div>
+    </div>
+  );
+}
+
+/* ============ احتفال بإنهاء الأسبوع ============ */
+export function Seal({ show }) {
+  if (!show) return null;
+  return (
+    <div className="seal" aria-hidden="true">
+      <svg viewBox="0 0 120 120">
+        <circle cx="60" cy="60" r="52" className="sealring" />
+        <path d="M38 62l14 14 30-31" className="sealcheck" />
+      </svg>
+    </div>
+  );
+}
+
+/* ============ عناصر بسيطة ============ */
+export const Bar = ({ pct, tone }) => (
   <div className="bar">
-    <i className={pctClass(pct)} style={{ width: `${pct}%` }} />
+    <i className={tone || ""} style={{ width: `${Math.min(pct, 100)}%` }} />
   </div>
 );
 
@@ -144,13 +160,7 @@ export const Failed = ({ text, onRetry }) => (
     <div className="fail">
       <b>ما قدرنا نجيب البيانات</b>
       <p style={{ marginBottom: 16 }}>{text}</p>
-      {onRetry && (
-        <button className="btn" onClick={onRetry}>
-          حاول مرة ثانية
-        </button>
-      )}
+      {onRetry && <button className="btn" onClick={onRetry}>حاول مرة ثانية</button>}
     </div>
   </div>
 );
-
-export { fmtDate };

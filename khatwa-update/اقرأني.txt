@@ -1,0 +1,19 @@
+تحديث "خطوة" — النظام الأسبوعي
+
+هذي الملفات الثمانية تستبدل الموجودة في مستودعك.
+الهيكل هنا مطابق تمامًا لهيكل مشروعك، فارفع كل ملف في مجلده:
+
+src/styles.css
+src/App.jsx
+src/lib/api.js
+src/lib/helpers.js
+src/components/UI.jsx
+src/views/Student.jsx
+src/views/Supervisor.jsx
+src/views/Exec.jsx
+
+طريقة الرفع على GitHub (تتفادى مشكلة فلطحة المجلدات):
+ادخل المجلد المقصود أولًا داخل khatwa-final، ثم:
+Add file ← Upload files ← اسحب الملف ← Commit changes
+
+مثال: لرفع UI.jsx افتح khatwa-final ثم src ثم components، وبعدها ارفع.

@@ -1,0 +1,575 @@
+@import url('https://fonts.googleapis.com/css2?family=Zain:wght@400;700;800;900&family=IBM+Plex+Sans+Arabic:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap');
+
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body { margin:0; padding:0; }
+:root {
+  --paper:#FBF3E3; --card:#FFFDF8; --ink:#0D2E2C; --muted:#6B7C79; --line:#E3D3B4;
+  --audio:#007979; --book:#E37434; --alert:#B23A3A; --ok:#2E7D5B; --hair:#EFE2C6;
+  --accent:#24B1B1; --cream:#FFE2AF;
+}
+body {
+  direction: rtl;
+  min-height:100vh; background:var(--paper); color:var(--ink);
+  font-family:'IBM Plex Sans Arabic', system-ui, sans-serif; font-size:15px; line-height:1.7;
+  transition: background .3s ease, color .3s ease;
+  overflow-x:hidden;
+  -webkit-font-smoothing: antialiased;
+}
+:root.dark {
+  --paper:#0B1F1D; --card:#12302C; --ink:#EDF6F3; --muted:#87A29D; --line:#1F3E39;
+  --audio:#24B1B1; --book:#F0925A; --alert:#E5847E; --ok:#7FCBA6; --hair:#173330;
+  --accent:#5FCACA; --cream:#3A3320;
+}
+p{margin:0} h1,h2,h3,h4{margin:0}
+button{font-family:inherit;cursor:pointer}
+input,select{font-family:inherit}
+.disp{font-family:'Zain',sans-serif;font-weight:800;letter-spacing:-.02em}
+.pill{font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;direction:ltr;unicode-bidi:isolate;font-size:12px;color:var(--muted)}
+
+@keyframes rise { from{opacity:0;transform:translateY(14px)} to{opacity:1;transform:none} }
+@keyframes draw { from{transform:scaleX(0)} to{transform:scaleX(1)} }
+@keyframes floatup {
+  0%{opacity:0;transform:translateY(8px) scale(.94)}
+  20%{opacity:1;transform:translateY(-2px) scale(1)}
+  100%{opacity:0;transform:translateY(-46px) scale(1)}
+}
+@keyframes sweepin{0%{transform:scaleX(0);opacity:1}65%{transform:scaleX(1);opacity:1}100%{transform:scaleX(1);opacity:0}}
+@keyframes ringpulse{0%{transform:scale(.6);opacity:.9}100%{transform:scale(2.4);opacity:0}}
+@keyframes popin{0%{opacity:0;transform:translateY(10px) scale(.96)}100%{opacity:1;transform:none}}
+@keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+.en { opacity:0; animation: rise .58s cubic-bezier(.16,.84,.34,1) forwards; }
+
+.wrap{max-width:1000px;margin:0 auto;padding:0 22px calc(80px + env(safe-area-inset-bottom))}
+.topbar{display:flex;align-items:center;gap:12px;padding:20px 0 14px}
+.logo{font-family:'Zain',sans-serif;font-weight:900;font-size:20px;letter-spacing:-.03em;color:var(--audio)}
+.logo em{font-style:normal;color:var(--muted);font-family:'IBM Plex Sans Arabic';font-weight:400;font-size:11.5px;margin-right:9px;letter-spacing:0}
+.sp{flex:1}
+.who{text-align:left;line-height:1.3}
+.who b{display:block;font-size:13.5px;font-weight:600}
+.who small{color:var(--muted);font-size:11px}
+.ib{border:1px solid var(--line);background:transparent;color:var(--ink);width:40px;height:40px;border-radius:11px;display:grid;place-items:center;font-size:15px;transition:.15s;flex:none}
+.ib:hover{border-color:var(--ink)}
+.gh{border:1px solid var(--line);background:transparent;color:var(--muted);padding:9px 15px;border-radius:11px;font-size:12.5px;transition:.15s;min-height:40px}
+.gh:hover{color:var(--ink);border-color:var(--ink)}
+
+/* odometer */
+.odo{display:inline-flex;direction:ltr}
+.reel{overflow:hidden;display:inline-block;height:1em}
+.reel .col{display:flex;flex-direction:column;line-height:1;transition:transform 1.15s cubic-bezier(.22,.9,.24,1)}
+.reel .col span{display:block;line-height:1}
+.reel.pad{opacity:.13}
+
+/* hero */
+.hero{padding:20px 0 0;position:relative}
+.eyebrow{font-size:11.5px;color:var(--muted);letter-spacing:.16em}
+.bignum{font-family:'Zain',sans-serif;font-weight:900;font-size:clamp(84px,19vw,172px);line-height:.86;letter-spacing:-.045em;margin:8px 0 0;display:flex;align-items:baseline}
+
+/* رقمان متساويان في الأهمية */
+.duo{display:flex;align-items:baseline;gap:26px;margin:10px 0 0;flex-wrap:wrap}
+.duonum{font-family:'Zain',sans-serif;font-weight:900;font-size:clamp(58px,14vw,116px);
+  line-height:.88;letter-spacing:-.045em;display:flex;align-items:baseline}
+.duonum.audio{color:var(--audio)}
+.duonum.book{color:var(--book)}
+.duonum .unit{font-family:'Zain',sans-serif;font-weight:700;font-size:clamp(15px,3vw,23px);
+  color:var(--muted);margin-right:.22em;letter-spacing:-.02em}
+.duosep{width:1px;align-self:stretch;background:var(--line);margin:6px 0}
+.unit{font-family:'Zain',sans-serif;font-weight:700;font-size:clamp(19px,4vw,29px);color:var(--muted);margin-right:.2em;letter-spacing:-.02em}
+.gauge{height:3px;background:var(--hair);border-radius:2px;margin:22px 0 11px;overflow:hidden;position:relative}
+.gauge i{display:block;height:100%;background:var(--audio);border-radius:2px;transition:width 1.2s cubic-bezier(.22,.9,.24,1) .5s}
+.gauge.full i{background:linear-gradient(90deg,var(--audio),var(--accent),var(--audio));background-size:200% 100%;animation:shimmer 2.4s linear infinite}
+.herofoot{display:flex;align-items:baseline;gap:7px;flex-wrap:wrap;font-size:13px;color:var(--muted)}
+.herofoot b{font-family:'Zain',sans-serif;font-weight:800;font-size:19px;color:var(--ink);letter-spacing:-.02em}
+.herofoot b.bk{color:var(--book)}
+.dot{width:3px;height:3px;border-radius:50%;background:var(--line);display:inline-block;margin:0 3px}
+.pop{position:absolute;top:16px;right:0;font-family:'Zain',sans-serif;font-weight:800;font-size:27px;pointer-events:none;animation:floatup 1.5s ease-out forwards;z-index:5}
+.ring{position:absolute;top:60px;right:22px;width:60px;height:60px;border-radius:50%;border:2px solid var(--audio);pointer-events:none;animation:ringpulse .9s ease-out forwards}
+
+/* streak */
+.streak{display:inline-flex;align-items:center;gap:6px;background:var(--cream);color:var(--book);
+  border-radius:20px;padding:4px 12px;font-size:12.5px;font-weight:500;margin-top:2px}
+:root.dark .streak{color:var(--book)}
+.streak b{font-family:'Zain',sans-serif;font-weight:800;font-size:15px}
+
+/* celebration */
+.cheer{background:var(--cream);border-radius:16px;padding:16px 18px;margin:20px 0 0;
+  display:flex;align-items:center;gap:14px;animation:popin .5s cubic-bezier(.16,.84,.34,1)}
+.cheer .big{font-family:'Zain',sans-serif;font-weight:900;font-size:34px;color:var(--book);line-height:1}
+.cheer h4{font-family:'Zain',sans-serif;font-weight:800;font-size:16px;color:var(--ink);margin-bottom:2px}
+.cheer p{font-size:12.5px;color:var(--muted)}
+
+/* week rail */
+.rail{display:flex;border-top:1px solid var(--line);margin:28px 0 0}
+.rday{flex:1;background:transparent;border:none;border-left:1px solid var(--hair);padding:11px 3px 12px;
+  display:flex;flex-direction:column;align-items:center;gap:6px;color:var(--muted);position:relative;transition:.18s;min-height:64px}
+.rday:first-child{border-left:none}
+.rday:hover{background:var(--card);color:var(--ink)}
+.rday.on{color:var(--ink)}
+.rday.on::before{content:"";position:absolute;top:-1px;right:0;left:0;height:2px;background:var(--audio)}
+.rday .dn{font-size:10.5px}
+.rday .dd{font-family:'Zain',sans-serif;font-weight:800;font-size:17px;letter-spacing:-.02em}
+.rday.today .dd::after{content:"";display:block;width:11px;height:1.5px;background:var(--book);margin:2px auto 0}
+.rday.off{opacity:.4}
+.rday.allok .dd{color:var(--ok)}
+.pips{display:flex;gap:2px;height:5px}
+.pip{width:5px;height:5px;border-radius:1px;background:var(--line);display:block}
+.pip.audio{background:var(--audio)} .pip.book{background:var(--book)}
+.swipehint{text-align:center;font-size:11px;color:var(--muted);padding:8px 0 0;display:none}
+
+/* month heatmap */
+.statgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-top:6px}
+.stat{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px 16px 14px;display:flex;flex-direction:column;gap:2px}
+.stat .sv{font-family:'Zain',sans-serif;font-weight:900;font-size:34px;line-height:1;letter-spacing:-.03em}
+.stat .sl{font-size:12.5px;color:var(--ink);margin-top:6px}
+.stat .sx{font-size:11px;color:var(--muted)}
+
+.heat{display:grid;grid-template-columns:repeat(8,1fr);gap:4px;direction:rtl;margin-top:4px}
+.heat.big{grid-template-columns:repeat(14,1fr);gap:5px}
+.hcell{aspect-ratio:1;border-radius:3px;background:var(--hair);transition:transform .15s}
+.hcell:hover{transform:scale(1.25)}
+.hcell.now{box-shadow:0 0 0 1.5px var(--book)}
+.heatkey .hcell{width:10px;height:10px;aspect-ratio:auto;flex:none}
+.hcell.l1{background:color-mix(in srgb, var(--audio) 30%, var(--hair))}
+.hcell.l2{background:color-mix(in srgb, var(--audio) 60%, var(--hair))}
+.hcell.l3{background:var(--audio)}
+.heatkey{display:flex;align-items:center;gap:5px;font-size:10.5px;color:var(--muted);margin-top:8px;justify-content:flex-end}
+.heatkey i{width:9px;height:9px;border-radius:2px;display:block}
+
+/* ledger */
+.ledger{border-top:1px solid var(--line)}
+.row{position:relative;border-bottom:1px solid var(--hair);padding:16px 4px;display:flex;align-items:center;gap:13px;flex-wrap:wrap;transition:background .2s}
+.row:hover{background:var(--card)}
+.row .sweep{position:absolute;inset:0;transform-origin:right;transform:scaleX(0);background:var(--card);pointer-events:none}
+.row.just .sweep{animation:sweepin .85s cubic-bezier(.22,.9,.24,1) forwards}
+.tag{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.05em;padding:3px 8px;border-radius:4px;white-space:nowrap;position:relative;direction:ltr}
+.tag.audio{color:var(--audio);border:1px solid var(--audio)}
+.tag.book{color:var(--book);border:1px solid var(--book)}
+.rtitle{flex:1;min-width:150px;position:relative}
+.rtitle h3{font-size:15px;font-weight:600;line-height:1.45;font-family:'IBM Plex Sans Arabic';transition:color .4s}
+.rtitle small{color:var(--muted);font-size:11.5px}
+.rtitle .strike{position:absolute;top:12px;right:0;height:1.5px;background:var(--muted);width:0;transition:width .6s cubic-bezier(.22,.9,.24,1) .15s}
+.row.done .rtitle h3{color:var(--muted)}
+.row.done .rtitle .strike{width:100%}
+.row.partial .rtitle .strike{width:0}
+.pagebar{height:3px;background:var(--hair);border-radius:2px;margin-top:6px;overflow:hidden;max-width:180px}
+.pagebar i{display:block;height:100%;background:var(--book);border-radius:2px;transition:width .7s cubic-bezier(.22,.9,.24,1)}
+.ract{display:flex;align-items:center;gap:9px;position:relative;flex-wrap:wrap}
+.btn{border:none;border-radius:11px;padding:11px 19px;font-size:13.5px;font-weight:500;background:var(--ink);color:var(--paper);transition:.15s;min-height:44px}
+.btn:hover{opacity:.87} .btn:active{transform:translateY(1px)}
+.btn.audio{background:var(--audio);color:#fff} .btn.book{background:var(--book);color:#fff}
+:root.dark .btn.audio,:root.dark .btn.book{color:#0B1F1D}
+.btn:disabled{opacity:.4;cursor:default}
+.btn.sm{padding:8px 14px;font-size:12.5px;min-height:38px}
+.btn.danger{background:transparent;color:var(--alert);border:1px solid var(--line)}
+.pin{width:66px;padding:11px 8px;border:1px solid var(--line);border-radius:11px;background:transparent;color:var(--ink);
+  font-family:'IBM Plex Mono',monospace;text-align:center;outline:none;direction:ltr;min-height:44px;font-size:16px}
+.pin:focus{border-color:var(--audio)}
+.lk{font-size:12.5px;color:var(--muted);text-decoration:none;border-bottom:1px solid var(--line);padding:4px 0}
+.lk:hover{color:var(--ink);border-color:var(--ink)}
+.undo{background:none;border:none;color:var(--muted);font-size:12px;border-bottom:1px solid var(--line);padding:6px 2px;min-height:32px}
+.undo:hover{color:var(--alert);border-color:var(--alert)}
+.stamp{font-size:12.5px;color:var(--ok);white-space:nowrap}
+.late{color:var(--alert)}
+
+.two{display:grid;grid-template-columns:1fr 262px;gap:36px;align-items:start;margin-top:26px}
+.blk{margin-bottom:26px}
+.blk h4{font-family:'Zain',sans-serif;font-weight:800;font-size:14px;margin-bottom:10px;color:var(--muted)}
+.lead{display:flex;align-items:center;gap:9px;padding:8px 0;border-bottom:1px solid var(--hair);font-size:13.5px}
+.lead:last-child{border-bottom:none}
+.lead .rk{font-family:'Zain',sans-serif;font-weight:800;font-size:14px;color:var(--muted);width:15px}
+.lead.me{font-weight:600} .lead.me .rk{color:var(--audio)}
+.lead .pt{margin-right:auto;font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--muted)}
+.warn{border-right:2px solid var(--alert);padding:2px 12px 2px 0;margin-bottom:20px}
+.warn h4{color:var(--alert);margin-bottom:4px;font-family:'Zain',sans-serif;font-weight:800;font-size:14px}
+.warn p{font-size:12.5px;color:var(--muted)}
+
+.tabs{display:flex;gap:20px;border-bottom:1px solid var(--line);margin:28px 0 22px;flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+.tabs::-webkit-scrollbar{display:none}
+.tab{background:none;border:none;color:var(--muted);padding:11px 0;font-size:13.5px;position:relative;transition:.15s;white-space:nowrap;min-height:44px}
+.tab:hover{color:var(--ink)}
+.tab.on{color:var(--ink);font-weight:600}
+.tab.on::after{content:"";position:absolute;bottom:-1px;right:0;left:0;height:2px;background:var(--audio);animation:draw .3s ease forwards;transform-origin:right}
+
+.srch{width:100%;padding:11px 14px;border:1px solid var(--line);border-radius:12px;background:var(--card);
+  color:var(--ink);outline:none;font-size:14px;margin-bottom:16px;min-height:44px}
+.srch:focus{border-color:var(--audio)}
+
+table{width:100%;border-collapse:collapse;font-size:13.5px}
+th{text-align:right;font-size:11px;color:var(--muted);font-weight:400;letter-spacing:.05em;padding:0 8px 9px;border-bottom:1px solid var(--line);white-space:nowrap}
+td{padding:13px 8px;border-bottom:1px solid var(--hair)}
+tr:last-child td{border-bottom:none}
+tbody tr{transition:background .15s} tbody tr:hover{background:var(--card)}
+.bar{height:4px;background:var(--hair);border-radius:3px;min-width:60px;overflow:hidden;flex:1}
+.bar i{display:block;height:100%;border-radius:3px;background:var(--audio);transition:width .9s cubic-bezier(.22,.9,.24,1)}
+.bar i.low{background:var(--alert)} .bar i.mid{background:var(--book)} .bar i.high{background:var(--ok)}
+.cellbar{display:flex;align-items:center;gap:9px}
+
+.form{max-width:460px}
+.fl{margin-bottom:20px}
+.fl label{display:block;font-size:11.5px;color:var(--muted);letter-spacing:.05em;margin-bottom:6px}
+.fl input,.fl select{width:100%;padding:12px 2px;border:none;border-bottom:1px solid var(--line);background:transparent;color:var(--ink);outline:none;font-size:16px;border-radius:0;transition:border-color .2s;min-height:44px}
+.fl input:focus,.fl select:focus{border-color:var(--audio)}
+.seg{display:flex;gap:20px}
+.seg button{background:none;border:none;color:var(--muted);font-size:14px;padding:9px 0;border-bottom:2px solid transparent;transition:.15s;min-height:44px}
+.seg button.on{color:var(--ink);border-color:var(--audio);font-weight:600}
+.r2{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+.made{margin-top:26px;padding-top:20px;border-top:1px solid var(--line)}
+
+.login{min-height:100vh;min-height:100svh;display:flex;flex-direction:column;justify-content:center;
+  align-items:center;padding:28px 20px calc(28px + env(safe-area-inset-bottom));overflow-y:auto}
+.lbox{width:100%;max-width:400px}
+.lmark{font-family:'Zain',sans-serif;font-weight:900;font-size:54px;letter-spacing:-.05em;line-height:1;color:var(--audio)}
+.ltag{color:var(--muted);font-size:13px;margin-top:6px}
+.digits{display:flex;gap:9px;direction:ltr;margin-top:30px;width:100%}
+/* min-width:0 ضروري: بدونه يرفض الـ input الانكماش تحت عرضه الافتراضي (~180px) فتفيض الخانات خارج الشاشة */
+.dg{flex:1 1 0;min-width:0;width:0;height:74px;text-align:center;font-family:'Zain',sans-serif;font-weight:900;font-size:32px;color:var(--ink);
+  background:transparent;border:none;border-bottom:2px solid var(--line);outline:none;padding:0;
+  transition:border-color .2s,transform .15s;border-radius:0;-webkit-appearance:none;appearance:none}
+.dg:focus{border-color:var(--audio);transform:translateY(-3px)}
+.dg.err{border-color:var(--alert)}
+.lhint{font-size:12px;color:var(--muted);margin-top:16px}
+.lerr{font-size:12.5px;color:var(--alert);margin-top:16px}
+.keys{margin-top:38px;border-top:1px solid var(--line);padding-top:14px}
+.keys h5{font-size:10.5px;color:var(--muted);font-weight:400;letter-spacing:.14em;margin:0 0 6px}
+.krow{display:flex;align-items:center;gap:10px;background:none;border:none;padding:9px 0;width:100%;color:var(--muted);font-size:12.5px;transition:.15s;text-align:right;min-height:44px}
+.krow:hover{color:var(--ink)}
+.krow b{font-family:'IBM Plex Mono',monospace;color:var(--audio);font-size:13px;direction:ltr}
+
+.empty{padding:38px 0;color:var(--muted);font-size:13.5px}
+.empty b{display:block;font-family:'Zain',sans-serif;font-weight:800;font-size:17px;color:var(--ink);margin-bottom:4px}
+.toast{position:fixed;bottom:calc(24px + env(safe-area-inset-bottom));right:50%;transform:translateX(50%);
+  background:var(--ink);color:var(--paper);padding:12px 22px;border-radius:12px;font-size:13px;z-index:60;
+  animation:rise .3s ease;max-width:90vw;text-align:center}
+
+/* ===== الجوال: الجداول تتحول لبطاقات ===== */
+@media (max-width:640px){
+  .wrap{padding:0 16px calc(70px + env(safe-area-inset-bottom))}
+  .two{grid-template-columns:1fr;gap:6px}
+  .r2{grid-template-columns:1fr;gap:0}
+  .topbar{padding:16px 0 12px;gap:8px}
+  .logo em{display:none}
+  .who b{font-size:12.5px}
+  .rday .dd{font-size:16px}
+  .rday{padding:10px 2px 11px}
+  .swipehint{display:block}
+  .heat{grid-template-columns:repeat(8,1fr);gap:5px}
+  .heat.big{grid-template-columns:repeat(12,1fr);gap:4px}
+  .statgrid{grid-template-columns:repeat(2,1fr);gap:10px}
+  .stat{padding:14px}
+  .stat .sv{font-size:29px}
+
+  table,thead,tbody,tr,td{display:block;width:100%}
+  thead{display:none}
+  tr{border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:10px;background:var(--card)}
+  tbody tr:hover{background:var(--card)}
+  td{border:none;padding:7px 0;display:flex;justify-content:space-between;align-items:center;gap:14px}
+  td::before{content:attr(data-l);color:var(--muted);font-size:11.5px;flex:none}
+  td:first-child{font-weight:600;font-size:15.5px;padding:0 0 11px;margin-bottom:6px;
+    border-bottom:1px solid var(--hair);display:block}
+  td:first-child::before{display:none}
+  td:last-child{border-bottom:none}
+  .cellbar{flex:1;justify-content:flex-end}
+  .bar{max-width:110px}
+  .row{padding:15px 2px;gap:10px}
+  .ract{width:100%;justify-content:flex-start;margin-top:2px}
+  .rtitle{min-width:100%;order:-1}
+  .cheer{padding:14px 15px;gap:12px}
+  .cheer .big{font-size:30px}
+  .duo{gap:16px}
+  .duonum{font-size:clamp(48px,17vw,84px)}
+  .duonum .unit{font-size:clamp(13px,3.6vw,18px)}
+}
+@media (max-width:360px){
+  .duo{gap:12px}
+  .duonum{font-size:44px}
+  .duosep{display:none}
+}
+/* ===== شاشة الدخول على الجوال ===== */
+@media (max-width:640px){
+  .lmark{font-size:44px}
+  .ltag{font-size:12.5px}
+  .digits{margin-top:24px;gap:8px}
+  .dg{height:66px;font-size:29px}
+}
+@media (max-width:380px){
+  .login{padding:20px 14px calc(20px + env(safe-area-inset-bottom))}
+  .lmark{font-size:38px}
+  .digits{gap:6px;margin-top:20px}
+  .dg{height:58px;font-size:25px}
+}
+/* الشاشات القصيرة جدًا (أو عند فتح لوحة المفاتيح) */
+@media (max-height:620px){
+  .login{justify-content:flex-start;padding-top:24px}
+  .lmark{font-size:36px}
+  .digits{margin-top:18px}
+  .dg{height:54px;font-size:24px}
+}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation:none!important;transition:none!important}
+  .en{opacity:1}
+}
+:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+
+
+/* ================= النظام الأسبوعي ================= */
+
+/* --- التنقل بين الأسابيع --- */
+.weeknav{display:flex;align-items:center;gap:14px;margin:24px 0 4px;
+  border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:12px 4px}
+.weektitle{flex:1;text-align:center;line-height:1.35}
+.weektitle b{display:block;font-family:'Zain',sans-serif;font-weight:800;font-size:17px;letter-spacing:-.02em}
+.weektitle small{color:var(--muted);font-size:11.5px}
+.navb{width:40px;height:40px;border-radius:12px;border:1px solid var(--line);
+  background:transparent;color:var(--ink);font-size:20px;line-height:1;flex:none;
+  transition:transform .18s cubic-bezier(.34,1.4,.5,1),border-color .18s,background .18s}
+.navb:hover:not(:disabled){border-color:var(--audio);color:var(--audio);transform:scale(1.08)}
+.navb:active:not(:disabled){transform:scale(.94)}
+.navb:disabled{opacity:.3;cursor:default}
+
+/* --- لوحة التقدّم --- */
+.progpanel{display:flex;align-items:center;gap:22px;background:var(--card);
+  border:1px solid var(--line);border-radius:20px;padding:20px 22px;margin:18px 0 0}
+.pacebox{flex:1;min-width:0}
+.pacebox h4{font-family:'Zain',sans-serif;font-weight:800;font-size:16px;margin-bottom:4px}
+.pacebox h4.ok{color:var(--ok)} .pacebox h4.late{color:var(--alert)}
+.pacebox h4.warnc{color:var(--book)}
+.pacebox p{font-size:13px;color:var(--muted)}
+.pacebox small{font-size:11.5px;color:var(--muted);display:block;margin-top:6px}
+.pacetext{font-size:14px;color:var(--ink)}
+.pacetext b{font-family:'Zain',sans-serif;font-weight:900;font-size:26px;
+  color:var(--audio);letter-spacing:-.02em;margin-left:2px}
+
+/* --- الحلقة --- */
+.ringwrap{position:relative;flex:none}
+.ringsvg{transform:rotate(-90deg);display:block}
+.ringbar{transition:stroke-dashoffset 1.3s cubic-bezier(.22,.9,.24,1) .1s,stroke .4s}
+.ringmid{position:absolute;inset:0;display:grid;place-items:center}
+.rv{font-family:'Zain',sans-serif;font-weight:900;font-size:27px;letter-spacing:-.03em;
+  display:flex;align-items:baseline}
+.rv i{font-style:normal;font-size:14px;color:var(--muted);margin-right:1px}
+
+/* --- شريط أيام الأسبوع --- */
+.rail .rday{cursor:default}
+.rday .rdot{width:5px;height:5px;border-radius:50%;background:var(--line);
+  transition:background .3s,transform .3s cubic-bezier(.34,1.5,.5,1)}
+.rday.hit .rdot{background:var(--audio);transform:scale(1.5)}
+.rday.today .rdot{box-shadow:0 0 0 3px color-mix(in srgb,var(--book) 30%,transparent)}
+
+/* --- بطاقة وحدة (كتاب / مقاطع) --- */
+.unit{background:var(--card);border:1px solid var(--line);border-radius:20px;
+  padding:18px 20px;margin-top:14px}
+.unithead{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+.unithead h3{font-family:'Zain',sans-serif;font-weight:800;font-size:17px;
+  letter-spacing:-.02em;flex:1;min-width:0}
+.utag{font-size:10.5px;letter-spacing:.04em;padding:3px 9px;border-radius:20px;white-space:nowrap}
+.utag.book{background:color-mix(in srgb,var(--book) 14%,transparent);color:var(--book)}
+.utag.audio{background:color-mix(in srgb,var(--audio) 14%,transparent);color:var(--audio)}
+.utag.q{background:color-mix(in srgb,var(--accent) 16%,transparent);color:var(--audio)}
+.utag.makeup{background:var(--cream);color:var(--book)}
+
+/* --- الكتاب --- */
+.bookpos{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+.bignumS{font-family:'Zain',sans-serif;font-weight:900;font-size:52px;
+  line-height:.9;letter-spacing:-.04em}
+.bignumS.book{color:var(--book)}
+.posl{font-size:12px;color:var(--muted)}
+.bookgauge{display:flex;gap:2px;height:34px;align-items:stretch;margin:6px 0 14px}
+.bookgauge i{flex:1;background:var(--hair);border-radius:1px;display:block;
+  transition:background .5s cubic-bezier(.22,.9,.24,1),transform .5s cubic-bezier(.34,1.4,.5,1);
+  transform-origin:bottom}
+.bookgauge i.on{background:var(--book);transform:scaleY(1)}
+.bookrow{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.inl{font-size:13px;color:var(--muted)}
+.hintline{font-size:12.5px;color:var(--muted);margin-top:12px}
+.hintline b{font-family:'Zain',sans-serif;font-weight:800;font-size:16px;color:var(--book)}
+.hintline.ok{color:var(--ok)}
+
+/* --- المقاطع --- */
+.cliplist{display:flex;flex-direction:column}
+.clip{display:flex;align-items:center;gap:13px;padding:12px 0;
+  border-bottom:1px solid var(--hair);opacity:0;animation:rise .5s cubic-bezier(.16,.84,.34,1) forwards}
+.clip:last-child{border-bottom:none}
+.clipmid{flex:1;min-width:0}
+.clipmid h4{font-size:14.5px;font-weight:600;line-height:1.5;transition:color .4s}
+.clip.done .clipmid h4{color:var(--muted);text-decoration:line-through;
+  text-decoration-color:var(--line);text-decoration-thickness:1.5px}
+.cbtn{background:none;border:none;padding:0;flex:none;width:34px;height:34px}
+
+/* علامة الصح تُرسم */
+.check svg{width:34px;height:34px;display:block;overflow:visible}
+.check .cbg{fill:none;stroke:var(--line);stroke-width:1.6;
+  transition:stroke .35s,fill .35s}
+.check .cpath{fill:none;stroke:var(--audio);stroke-width:2.4;
+  stroke-linecap:round;stroke-linejoin:round;
+  stroke-dasharray:22;stroke-dashoffset:22;
+  transition:stroke-dashoffset .45s cubic-bezier(.65,0,.35,1)}
+.check.on .cbg{stroke:var(--audio);fill:color-mix(in srgb,var(--audio) 10%,transparent)}
+.check.on .cpath{stroke-dashoffset:0}
+.cbtn:active .check svg{transform:scale(.88);transition:transform .1s}
+
+/* --- نافذة --- */
+.backdrop{position:fixed;inset:0;z-index:80;background:rgba(8,20,18,.5);
+  backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);
+  display:flex;align-items:center;justify-content:center;padding:20px;
+  animation:fadein .25s ease}
+@keyframes fadein{from{opacity:0}to{opacity:1}}
+.modal{background:var(--card);border:1px solid var(--line);border-radius:22px;
+  padding:24px;width:100%;max-width:440px;max-height:88vh;overflow-y:auto;
+  animation:modalin .42s cubic-bezier(.16,.9,.3,1)}
+.modal.wide{max-width:620px}
+@keyframes modalin{from{opacity:0;transform:translateY(20px) scale(.96)}to{opacity:1;transform:none}}
+.modaltitle{font-size:19px;margin-bottom:14px}
+.modalrow{display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;margin-top:18px}
+.ghostbtn{background:transparent;color:var(--muted);border:1px solid var(--line)}
+.ghostbtn:hover{color:var(--ink);border-color:var(--ink);opacity:1}
+.qtext{font-family:'Zain',sans-serif;font-weight:800;font-size:18px;
+  line-height:1.65;margin-bottom:16px;letter-spacing:-.01em}
+.ta{width:100%;border:1px solid var(--line);border-radius:14px;background:var(--paper);
+  color:var(--ink);padding:14px;font-size:15px;line-height:1.8;outline:none;
+  resize:vertical;font-family:inherit;transition:border-color .2s}
+.ta:focus{border-color:var(--audio)}
+.choices{display:flex;flex-direction:column;gap:9px}
+.choice{text-align:right;padding:14px 16px;border-radius:14px;border:1px solid var(--line);
+  background:transparent;color:var(--ink);font-size:14.5px;transition:.2s;min-height:48px}
+.choice:hover{border-color:var(--muted)}
+.choice.on{border-color:var(--audio);background:color-mix(in srgb,var(--audio) 10%,transparent);
+  font-weight:600}
+
+/* --- ختم الإنجاز --- */
+.seal{position:fixed;inset:0;z-index:90;display:grid;place-items:center;pointer-events:none}
+.seal svg{width:170px;height:170px;overflow:visible}
+.sealring{fill:none;stroke:var(--ok);stroke-width:3;
+  stroke-dasharray:327;stroke-dashoffset:327;
+  animation:sealdraw .7s cubic-bezier(.5,0,.2,1) forwards, sealout .5s ease 1.3s forwards}
+.sealcheck{fill:none;stroke:var(--ok);stroke-width:6;stroke-linecap:round;stroke-linejoin:round;
+  stroke-dasharray:64;stroke-dashoffset:64;
+  animation:sealdraw2 .45s cubic-bezier(.5,0,.2,1) .5s forwards, sealout .5s ease 1.3s forwards}
+@keyframes sealdraw{to{stroke-dashoffset:0}}
+@keyframes sealdraw2{to{stroke-dashoffset:0}}
+@keyframes sealout{to{opacity:0;transform:scale(1.25)}}
+
+/* --- محرّر الخطة --- */
+.editor{max-width:560px}
+.esec{border-top:1px solid var(--line);padding:20px 0 6px}
+.esec:first-child{border-top:none;padding-top:4px}
+.esechead{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+.esechead h4{font-size:13px;color:var(--muted);font-weight:400}
+.clipedit{border:1px solid var(--line);border-radius:16px;padding:14px 16px 8px;margin-bottom:12px;
+  animation:rise .4s cubic-bezier(.16,.84,.34,1)}
+.calc{font-size:12.5px;color:var(--muted);margin-top:-6px}
+.calc b{font-family:'Zain',sans-serif;font-weight:800;font-size:16px;color:var(--ink)}
+.errline{color:var(--alert);font-size:12.5px;margin-top:10px}
+.chk{display:flex;align-items:center;gap:10px;font-size:13.5px;margin-top:18px;cursor:pointer}
+.chk input{width:19px;height:19px;accent-color:var(--audio)}
+.planview .unit{margin-top:12px}
+.planline{font-size:14px;padding:5px 0;color:var(--ink)}
+.planline b{font-family:'Zain',sans-serif;font-weight:800;font-size:17px}
+
+/* --- الإجابات --- */
+.answer{border:1px solid var(--line);border-radius:18px;padding:16px 18px;margin-bottom:12px;
+  background:var(--card);border-right:3px solid var(--book)}
+.answer.read{border-right-color:var(--ok);opacity:.75}
+.ahead{display:flex;align-items:center;gap:10px;margin-bottom:8px;flex-wrap:wrap}
+.ahead b{font-size:14.5px}
+.atext{font-size:14.5px;line-height:1.9;white-space:pre-wrap}
+.mini{font-size:11.5px;padding:5px 11px;border-radius:20px;border:1px solid var(--line);
+  background:transparent;color:var(--muted);transition:.18s;min-height:30px}
+.mini:hover{color:var(--ink);border-color:var(--ink)}
+.mini.ok{color:var(--ok);border-color:color-mix(in srgb,var(--ok) 45%,transparent)}
+.mini.warn{color:var(--book);border-color:color-mix(in srgb,var(--book) 45%,transparent)}
+
+/* --- أسابيع السجل --- */
+.blkhead{display:flex;align-items:baseline;gap:10px;margin-bottom:12px}
+.blkhead h4{margin:0}
+.weekrow{display:flex;align-items:center;gap:11px;padding:9px 0;
+  border-bottom:1px solid var(--hair);font-size:13.5px;opacity:0;
+  animation:rise .5s cubic-bezier(.16,.84,.34,1) forwards}
+.weekrow:last-child{border-bottom:none}
+.wl{min-width:104px}
+.muted{color:var(--muted)}
+
+@media (max-width:640px){
+  .progpanel{gap:16px;padding:16px 16px;border-radius:18px}
+  .unit{padding:16px 15px;border-radius:18px}
+  .bignumS{font-size:44px}
+  .bookgauge{height:28px}
+  .weeknav{gap:8px}
+  .weektitle b{font-size:15.5px}
+  .modal{padding:20px 18px;border-radius:20px;max-height:92vh}
+  .qtext{font-size:16.5px}
+  .wl{min-width:88px;font-size:12.5px}
+  .answer{padding:14px 15px}
+}
+
+
+/* ================= طبقة الحركة ================= */
+
+/* --- زر بموجة لمس --- */
+.btn{position:relative;overflow:hidden;isolation:isolate}
+.btnlabel{position:relative;z-index:2}
+.btn .wave{position:absolute;width:14px;height:14px;border-radius:50%;
+  background:rgba(255,255,255,.55);transform:translate(-50%,-50%) scale(0);
+  animation:waveout .62s cubic-bezier(.22,.9,.24,1) forwards;pointer-events:none;z-index:1}
+.ghostbtn .wave,.danger .wave{background:color-mix(in srgb,var(--ink) 18%,transparent)}
+@keyframes waveout{to{transform:translate(-50%,-50%) scale(22);opacity:0}}
+.btn:active{transform:translateY(1px) scale(.985)}
+.btn{transition:opacity .15s,transform .12s cubic-bezier(.34,1.4,.5,1),background .2s}
+
+/* --- مؤشر تحميل بثلاث نقاط --- */
+.loader{display:flex;gap:7px;justify-content:center}
+.loader i{width:9px;height:9px;border-radius:50%;background:var(--audio);display:block;
+  animation:bounce 1.15s cubic-bezier(.4,0,.6,1) infinite}
+.loader i:nth-child(2){animation-delay:.14s;background:var(--accent)}
+.loader i:nth-child(3){animation-delay:.28s;background:var(--book)}
+@keyframes bounce{0%,70%,100%{transform:translateY(0);opacity:.45}
+  35%{transform:translateY(-11px);opacity:1}}
+
+/* --- هيكل عظمي --- */
+.skel{background:linear-gradient(90deg,var(--hair) 25%,var(--card) 50%,var(--hair) 75%);
+  background-size:200% 100%;animation:skelshine 1.4s linear infinite}
+@keyframes skelshine{to{background-position:-200% 0}}
+
+/* --- خروج النافذة --- */
+.backdrop.out{animation:fadeout .2s ease forwards}
+.modal.out{animation:modalout .2s ease forwards}
+@keyframes fadeout{to{opacity:0}}
+@keyframes modalout{to{opacity:0;transform:translateY(10px) scale(.97)}}
+
+/* --- الختم مع شرر --- */
+.sealbox{display:flex;flex-direction:column;align-items:center;gap:10px}
+.seallabel{font-family:'Zain',sans-serif;font-weight:800;font-size:19px;color:var(--ok);
+  opacity:0;animation:labelin .4s cubic-bezier(.16,.9,.3,1) .75s forwards,
+  sealout .45s ease 1.5s forwards}
+@keyframes labelin{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.sparks{position:absolute;inset:0;display:grid;place-items:center;pointer-events:none}
+.sparks i{position:absolute;width:6px;height:6px;border-radius:50%;background:var(--ok);
+  opacity:0;animation:spark .75s cubic-bezier(.22,.9,.24,1) forwards}
+@keyframes spark{
+  0%{opacity:0;transform:rotate(var(--a)) translateX(24px) scale(.4)}
+  25%{opacity:1}
+  100%{opacity:0;transform:rotate(var(--a)) translateX(112px) scale(.15)}}
+
+/* --- تبديل التبويب بانزلاق --- */
+@keyframes swapin{from{opacity:0;transform:translateX(-14px)}to{opacity:1;transform:none}}
+.swap{animation:swapin .36s cubic-bezier(.16,.9,.3,1)}
+
+/* --- ظهور عند التمرير --- */
+.rev{opacity:0;transform:translateY(18px)}
+.rev.seen{animation:rise .6s cubic-bezier(.16,.84,.34,1) forwards}
+
+/* --- تحويم البطاقات --- */
+.unit{transition:border-color .25s,transform .25s cubic-bezier(.22,.9,.24,1),box-shadow .25s}
+.unit:hover{border-color:color-mix(in srgb,var(--audio) 35%,var(--line))}
+
+/* --- نبض عند تغيّر الرقم --- */
+@keyframes numpulse{0%{transform:scale(1)}30%{transform:scale(1.055)}100%{transform:scale(1)}}
+.pulse{animation:numpulse .55s cubic-bezier(.34,1.4,.5,1)}
+
+/* --- شريط علوي يبيّن نسبة الأسبوع --- */
+.topline{position:fixed;top:0;right:0;left:0;height:3px;background:transparent;z-index:70}
+.topline i{display:block;height:100%;background:linear-gradient(90deg,var(--audio),var(--accent));
+  transition:width 1.2s cubic-bezier(.22,.9,.24,1) .3s;border-radius:0 0 0 3px}
+
+@media (prefers-reduced-motion:reduce){
+  .btn .wave,.sparks,.loader i{display:none!important}
+  .rev{opacity:1;transform:none}
+}
